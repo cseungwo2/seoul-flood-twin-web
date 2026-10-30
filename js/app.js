@@ -8,7 +8,7 @@ import { initRoute } from './route.js';
 const [M, meta] = await Promise.all(['data/model.json', 'data/meta.json'].map((u) => fetch(u).then((r) => r.json())));
 const Q = new URLSearchParams(location.search);
 const S = { rain: Q.has('rain') ? Math.max(0, Math.min(174, +Q.get('rain') || 0)) : 100, cut: M.cut_default, tau: M.tau_default,
-  mult: { shelter: 0, barrier: 0, pump: 0, volunteers: 0 } }; // 처음엔 대응 자원 전부 꺼짐(포스터 값)
+  mult: { shelter: 0, barrier: 0, pump: 0, volunteers: 0 }, zone: 0 }; // zone = 지도에 예상 피해 지역을 켠 시민 유형 비트(1 << p, 처음엔 모두 끔) // 처음엔 대응 자원 전부 꺼짐(포스터 값)
 let sel = Q.has('gu') && M.gn.includes(Q.get('gu')) ? M.gn.indexOf(Q.get('gu')) : null; // 처음엔 서울 전체(고른 구 없음)
 const VIEWS = { yeouido: { center: [126.9375, 37.5218], zoom: 15, pitch: 62, bearing: -25 } };
 const noInfo = new Set(M.gn.map((_, gi) => gi).filter((gi) => M.res.shelter_cap[gi] == null));
@@ -69,14 +69,14 @@ for (const g of document.querySelectorAll('.gutter')) {
   });
 }
 
-let lastRain = null, frame = 0, REC = [], route = null;
+let lastRain = null, lastZone = null, frame = 0, REC = [], route = null;
 function render() {
   frame = 0;
   computeAlerts();
   twin?.setClass(worst.map((p, gi) => alertClass(p == null ? null : A[gi][p])));
   rainFx.set(S.rain);
   route?.update();
-  if (twin && S.rain !== lastRain) { twin.setRain(S.rain); lastRain = S.rain; }
+  if (twin && (S.rain !== lastRain || S.zone !== lastZone)) { twin.setRain(S.rain, S.zone); lastRain = S.rain; lastZone = S.zone; zoneLegend(); }
   let people = 0, saved = 0;
   REC = M.gn.map((_, gi) => recovered(M, S, gi));
   for (let gi = 0; gi < M.gn.length; gi++) { for (const d of demand(M, S, gi)) people += d; saved += REC[gi].saved; }
@@ -88,6 +88,13 @@ function showSel() {
   panels.pick(sel == null);
   if (sel != null) { panels.gu(sel, A[sel]); panels.arsm(sel); }
 }
+function zoneLegend() {
+  const ps = M.persona.filter((_, p) => (S.zone >> p) & 1), el = document.getElementById('lg-zone');
+  el.hidden = document.getElementById('lg-zone-h').hidden = !ps.length; // 켠 유형이 없으면 범례도 숨김
+  if (!ps.length) return;
+  el.querySelector('.sw').style.background = ps.length === 1 ? ps[0].color : `linear-gradient(90deg, ${ps.map((q) => q.color).join(', ')})`;
+  el.querySelector('span').textContent = `예상 피해 지역(${ps.map((q) => q.name).join(' · ')})`;
+}
 function schedule() { if (!frame) frame = requestAnimationFrame(render); }
 /** gi = null → 고른 구 없음(서울 전체). */
 function select(gi) {
@@ -98,7 +105,7 @@ function select(gi) {
 }
 render();
 try {
-  twin = await createMap({ container: 'map', meta, noInfo, view: VIEWS[Q.get('view')], onSelect: (gi) => select(gi) });
+  twin = await createMap({ container: 'map', meta, noInfo, view: VIEWS[Q.get('view')], colors: M.persona.map((p) => p.color), onSelect: (gi) => select(gi) });
   twin.setSelected(sel);
   try {
     route = initRoute({ map: twin.map, base: twin.base, guBox: twin.guBox, shelters: twin.shelters, water: twin.water, persona: M.persona, getRain: () => S.rain,

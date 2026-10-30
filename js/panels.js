@@ -65,6 +65,10 @@ const guides = {
   },
 };
 export function initPanels({ M, S, sel, onChange, onSelect, onResFocus }) {
+  // 경보 표 줄 누르기 = 그 시민 유형의 예상 피해 지역을 지도에 켜기/끄기(여럿 켤 수 있음) — S.zone 비트
+  const pickLine = (li) => { if (!li) return; S.zone ^= 1 << +li.dataset.p; onChange(); };
+  $('lines').addEventListener('click', (e) => pickLine(e.target.closest('li[data-p]')));
+  $('lines').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickLine(e.target.closest('li[data-p]')); } });
   const narrow = matchMedia('(max-width: 860px)').matches;
 
   // 슬라이더
@@ -178,15 +182,18 @@ export function initPanels({ M, S, sel, onChange, onSelect, onResFocus }) {
       const r = Math.round(S.rain), D = demand(M, S, gi), dMax = Math.max(1, ...D), L = lifeShown(M, S, gi);
       const order = [0, 1, 2, 3, 4, 5].sort((a, b) => RANK[alerts[b].status] - RANK[alerts[a].status] || a - b);
       // 한 줄 = 한 유형: 상태 · 경보까지 남은 시간 · 침수 노출 인원(막대, 경보 기준 미만이면 회색). 긴 설명은 마우스를 올리면(title)
-      const head = '<li class="lh" aria-hidden="true"><span></span><span>시민 유형</span><span>상태</span><span>경보까지</span><span>침수 노출 인원</span></li>';
+      const head = '<li class="lh" aria-hidden="true"><span>지도</span><span>시민 유형</span><span>상태</span><span>경보까지</span><span>침수 노출 인원</span></li>';
+      const focusP = document.activeElement?.closest?.('#lines li[data-p]')?.dataset.p; // 다시 그려도 키보드 초점 유지
       $('lines').innerHTML = head + order.map((p) => {
         const a = alerts[p], st = a.status;
         const when = st === 'safe' ? '–' : st === 'late' ? '지금' : `${Math.max(1, Math.round(a.alertIn))}분`;
         const tip = `${sentence(M, S, gi, p)} · 인명 위해 수심 노출 ${pct(L[p].v)}${L[p].adj ? ` (자원 반영 후 ${pct(L[p].after)})` : ''}${M.low[gi][p] ? ' · 거주 적음(지도 판정 제외)' : ''}`;
-        return `<li class="${st}" title="${tip}"><i class="chip" style="background:${persona[p].color}"></i>
+        const on = (S.zone >> p) & 1, col = persona[p].color; // 칩: 켬 = 꽉 찬 색, 끔 = 테두리만
+        return `<li class="${st}${on ? ' on' : ''}" data-p="${p}" role="button" tabindex="0" aria-pressed="${!!on}" title="${tip} · 누르면 지도에 예상 피해 지역 ${on ? '끄기' : '켜기'}"><i class="chip" style="background:${on ? col : 'transparent'};box-shadow:inset 0 0 0 2px ${col}"></i>
           <span class="nm">${persona[p].name}</span><span class="st">${STATUS_WORD[st]}</span><span class="when">${when}</span>
           <span class="ppl"><b>${fmt(D[p])}</b><span class="track"><i style="width:${(D[p] / dMax) * 100}%;background:${persona[p].color}"></i></span></span></li>`;
       }).join('');
+      if (focusP != null) $('lines').querySelector(`li[data-p="${focusP}"]`)?.focus();
       const n = { late: 0, now: 0, safe: 0 };
       alerts.forEach((a) => n[a.status]++);
       $('gu-count').textContent = `대피 시간 부족 ${n.late} · 경보 필요 ${n.now} · 경보 기준 미만 ${n.safe}`;

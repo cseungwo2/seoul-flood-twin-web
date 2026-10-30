@@ -166,10 +166,14 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 }
 .gucount { margin: 0; font-size: 12px; color: var(--ink-2); }
 .lines { list-style: none; margin: 0; padding: 0; }
-.lines li { display: grid; grid-template-columns: 10px minmax(0, 1.5fr) 1fr 0.8fr 1.4fr; align-items: center; gap: 8px; padding: 7px 0; font-size: 13px; cursor: default; }
+.lines li { display: grid; grid-template-columns: 24px minmax(0, 1.5fr) 1fr 0.8fr 1.4fr; align-items: center; gap: 8px; padding: 7px 0; font-size: 13px; cursor: default; }
 .lines li + li { border-top: 1px solid var(--line); }
+.lines li[data-p] { cursor: pointer; }
+.lines li[data-p]:hover { background: #F7F4EE; }
+.lines li.on { background: #EFEAE1; box-shadow: inset 3px 0 0 #262626; }
+.lgh { margin: 2px 0 6px; font-size: 11px; color: var(--ink-2); white-space: normal; }
 .lines li.lh { padding: 0 0 4px; font-size: 11px; color: var(--ink-2); }
-.lines .chip { width: 10px; height: 10px; margin: 0; }
+.lines .chip { width: 12px; height: 12px; margin: 0 auto; border-radius: 3px; }
 .lines .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lines .st { font-weight: 700; font-size: 12px; }
 .lines li.late .st, .lines li.now .st { color: var(--crimson); }

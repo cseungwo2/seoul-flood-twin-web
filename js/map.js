@@ -75,6 +75,55 @@ async function waterCanvas() {
   };
 }
 
+/** persona_onset_a/b.png(R G B = 시민 유형 0 1 2 / 3 4 5) → 예상 피해 지역 canvas. 칸값 = 그 유형 생활 공간이 인명 위해 수심에 처음 닿는 강우, 255 = 아님 · 안 닿음.
+ *  draw(rain, mask, rad): mask = 켠 유형 비트(1 << p), 0 = 아무것도 안 그림. 칸에 켠 유형이 여럿이면 먼저 잠기는 유형(같으면 앞 번호).
+ *  rad = 칸을 사방 rad 칸 넓혀 칠함(구 전체 줌에서 20 m 칸이 1 px 아래로 사라지지 않게 — 표시용, 판정은 칸 그대로). */
+async function zoneCanvas(colors) {
+  const px = await Promise.all(['a', 'b'].map(async (k) => {
+    const bmp = await createImageBitmap(await (await fetch(`${BASE}data/persona_onset_${k}.png`)).blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    const c = new OffscreenCanvas(bmp.width, bmp.height), x = c.getContext('2d');
+    x.drawImage(bmp, 0, 0);
+    return x.getImageData(0, 0, bmp.width, bmp.height);
+  }));
+  const { width: W, height: H } = px[0], n = W * H;
+  const on = [0, 1, 2, 3, 4, 5].map(() => new Uint8Array(n));
+  for (let p = 0; p < 6; p++) { const d = px[p < 3 ? 0 : 1].data, c = p % 3; for (let i = 0; i < n; i++) on[p][i] = d[i * 4 + 3] ? d[i * 4 + c] : 255; }
+  const cells = [];
+  for (let i = 0; i < n; i++) if (on.some((o) => o[i] < 255)) cells.push(i);
+  const idx = Uint32Array.from(cells);
+  const abgr = colors.map((h) => 0xff000000 | (parseInt(h.slice(5, 7), 16) << 16) | (parseInt(h.slice(3, 5), 16) << 8) | parseInt(h.slice(1, 3), 16));
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d'), img = ctx.createImageData(W, H), out = new Uint32Array(img.data.buffer);
+  return {
+    canvas,
+    draw(rain, mask, rad = 0) {
+      out.fill(0);
+      for (let k = 0; mask && k < idx.length; k++) {
+        const i = idx[k];
+        let b = 255, bp = -1;
+        for (let p = 0; p < 6; p++) if ((mask >> p) & 1 && on[p][i] < b) { b = on[p][i]; bp = p; }
+        if (bp < 0 || b > rain) continue;
+        const c = abgr[bp], x = i % W, y = (i - x) / W;
+        for (let yy = Math.max(0, y - rad); yy <= Math.min(H - 1, y + rad); yy++)
+          for (let xx = Math.max(0, x - rad); xx <= Math.min(W - 1, x + rad); xx++) out[yy * W + xx] = c;
+      }
+      ctx.putImageData(img, 0, 0);
+    },
+  };
+}
+
+/** 건물 색: 대표점 칸이 켠 유형(mask)의 인명 위해 수심에 닿았으면 그 유형 색(여럿이면 먼저 잠기는 유형), 아니면 높이별 회색. o0..o5 = 타일 속성. */
+const BUILD_GREY = ['interpolate', ['linear'], ['get', 'h'], 3, '#E9E4DA', 40, '#DCD5C9', 120, '#CFC7BA'];
+const onP = (p) => ['coalesce', ['get', `o${p}`], 999];
+function buildColor(rain, mask, colors) {
+  const ps = [0, 1, 2, 3, 4, 5].filter((p) => (mask >> p) & 1), last = ps.at(-1);
+  if (!ps.length) return BUILD_GREY;
+  if (ps.length === 1) return ['case', ['<=', onP(last), rain], colors[last], BUILD_GREY];
+  return ['let', 'm', ['min', ...ps.map(onP)],
+    ['case', ['>', ['var', 'm'], rain], BUILD_GREY, ...ps.slice(0, -1).flatMap((p) => [['==', onP(p), ['var', 'm']], colors[p]]), colors[last]]];
+}
+
 function hatch() {
   const c = document.createElement('canvas'); c.width = c.height = 8;
   const x = c.getContext('2d');
@@ -92,9 +141,10 @@ const bboxOf = (geom) => {
 
 /**
  * createMap({ container, meta, noInfo: Set<gi>, onSelect(gi), view? })
- * → Promise<{ map, setRain(r), setClass(clsByGi), setHatch(gis), setSelected(gi) }>
+* colors = 시민 유형 6색(panels TWIN_COLORS → M.persona[].color)
+ * → Promise<{ map, setRain(r, zoneMask), setClass(clsByGi), setHatch(gis), setSelected(gi) }>
  */
-export async function createMap({ container, meta, noInfo, onSelect, view }) {
+export async function createMap({ container, meta, noInfo, onSelect, view, colors }) {
   const [style, gu, shelters] = await Promise.all([
     fetch('https://tiles.openfreemap.org/styles/positron').then((r) => r.json()),
     fetch(BASE + 'data/gu.geojson').then((r) => r.json()),
@@ -159,6 +209,20 @@ export async function createMap({ container, meta, noInfo, onSelect, view }) {
   map.addLayer({ id: 'roads', type: 'fill', source: 'city', 'source-layer': 'r', minzoom: BUILD_Z, paint: {
     'fill-color': ['match', ['get', 'class'], '고속', '#55585D', '간선', '#606368', '#787B80'], 'fill-outline-color': '#4A4D51' } }, firstSymbol); // 아스팔트
   map.addLayer({ id: 'water-depth', type: 'raster', source: 'water-depth', paint: { 'raster-opacity': 0.85, 'raster-fade-duration': 0, 'raster-resampling': 'nearest' } }, firstSymbol);
+  // 예상 피해 지역(시민 유형 생활 공간이 인명 위해 수심에 잠기는 칸): 서울 전체 줌에선 너무 잘아 숨기고, 구를 띄우면(≈ 11.5~) 보임. 건물이 서면 건물 색이 이어받아 옅게
+  const zone = await zoneCanvas(colors);
+  map.addSource('persona-zone', { type: 'canvas', canvas: zone.canvas, coordinates: meta.onset_corners, animate: false });
+  const zsrc = map.getSource('persona-zone');
+  // ponytail: 줌 단계 3개로 넓힘(z < 12.5 → 2칸, < BUILD_Z → 1칸, 그 위 0). 더 매끈하게는 줌마다 rad 를 연속으로
+  const zoneRad = () => (map.getZoom() < 12.5 ? 2 : map.getZoom() < BUILD_Z ? 1 : 0);
+  let zoneState = { rain: 0, pick: 0, rad: -1 }; // pick = 켠 유형 비트
+  const drawZone = (st) => {
+    if (st.rain === zoneState.rain && st.pick === zoneState.pick && st.rad === zoneState.rad) return false;
+    zoneState = st; zone.draw(st.rain, st.pick, st.rad); return true;
+  };
+  map.on('zoomend', () => { if (drawZone({ ...zoneState, rad: zoneRad() })) { zsrc.play(); map.once('render', () => zsrc.pause()); } });
+  map.addLayer({ id: 'persona-zone', type: 'raster', source: 'persona-zone', paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 11, 0, 11.6, 0.85, BUILD_Z, 0.85, BUILD_Z + 0.4, 0.45],
+    'raster-fade-duration': 0, 'raster-resampling': 'nearest' } }, firstSymbol);
 
   // 중앙선(OSM 도로 중심선): 큰길 = 노란 겹실선, 중간 길 = 노란 점선. 일방통행(상 · 하행이 따로 그려진 길)은 제외
   const twoWay = ['!', ['in', ['get', 'oneway'], ['literal', [1, -1]]]];
@@ -192,7 +256,7 @@ export async function createMap({ container, meta, noInfo, onSelect, view }) {
     map.setLayerZoomRange('landmark-parts', 12.5, 24);
   } catch (e) { console.info('특이 건물 없이 계속:', e.message); }
   map.addLayer({ id: 'buildings', type: 'fill-extrusion', source: 'city', 'source-layer': 'b', minzoom: BUILD_Z, paint: {
-    'fill-extrusion-color': ['interpolate', ['linear'], ['get', 'h'], 3, '#E9E4DA', 40, '#DCD5C9', 120, '#CFC7BA'],
+    'fill-extrusion-color': buildColor(0, null, colors),
     'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': BUILD_OP,
     'fill-extrusion-vertical-gradient': true } }, map.getLayer('landmark-parts') ? 'landmark-parts' : undefined);
   map.on('click', 'buildings', (e) => api.onBuilding?.(e.lngLat)); // 건물 클릭 → 대피 경로 안내 묻기
@@ -257,10 +321,12 @@ export async function createMap({ container, meta, noInfo, onSelect, view }) {
   const api = {
     map, routeMode: false, base: BASE, guBox, shelters,
     water: { deep: water.deep, w: water.w, h: water.h, corners: meta.onset_corners },
-    setRain(r) {
-      water.draw(r);
-      wsrc.play();
-      map.once('render', () => wsrc.pause());
+    /** pick = 예상 피해 지역을 켠 시민 유형 비트(0 = 끔). 강우 · 켠 유형이 바뀔 때만 부름. */
+    setRain(r, pick = 0) {
+      water.draw(r); drawZone({ rain: r, pick, rad: zoneRad() });
+      wsrc.play(); zsrc.play();
+      map.once('render', () => { wsrc.pause(); zsrc.pause(); });
+      map.setPaintProperty('buildings', 'fill-extrusion-color', buildColor(r, pick, colors));
     },
     setClass(cl) { cl.forEach((c, gi) => map.setFeatureState({ source: 'gu', id: gi }, { cls: c })); },
     setRecover(share) { share.forEach((v, gi) => map.setFeatureState({ source: 'gu', id: gi }, { rec: v })); },
