@@ -96,6 +96,8 @@ render();
 try {
   twin = await createMap({ container: 'map', meta, view: VIEWS[Q.get('view')], colors: M.persona.map((p) => p.color), barrierH: M.res.barrier_h, onSelect: (gi) => select(gi) });
   twin.setSelected(sel);
+  const show = () => document.getElementById('map').classList.add('ready');   // 첫 화면이 다 그려진 뒤 보이게(느린 망이면 4초 뒤엔 그냥 보임)
+  twin.map.once('idle', show); setTimeout(show, 4000);
   try {
     route = initRoute({ map: twin.map, base: twin.base, guBox: twin.guBox, shelters: twin.shelters, water: twin.water, persona: M.persona, getRain: () => S.rain,
       getAlert: (gi, p) => A[gi][p],

@@ -3,7 +3,8 @@ import { addLandmarks3D } from './landmarks3d.js';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 13.5;
-export const BUILD_OP = ['interpolate', ['linear'], ['zoom'], BUILD_Z, 0, BUILD_Z + 0.4, 0.92]; // 건물 불투명도(경로 볼 때 반투명 → 되돌릴 값)
+// 건물 불투명도(경로 볼 때 반투명 → 되돌릴 값). 서서히 나타나는 0.4줌 효과는 늦어 보여서 BUILD_Z 에서 바로 켜짐
+export const BUILD_OP = ['interpolate', ['linear'], ['zoom'], BUILD_Z - 0.05, 0, BUILD_Z, 0.92];
 const TILE_MAXZ = 14; // prep/build_tiles.mjs 의 MAXZ 와 같게. 더 확대하면 z14 타일을 늘려 씀(z18 까지 모양 차이 없음)
 const WATER = [0xffa1470d, 0xfff5a542, 0xfff9ca90]; // ABGR(리틀 엔디언): #0D47A1 · #42A5F5 · #90CAF9
 const MOUNTAINS = [
@@ -289,6 +290,7 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
     await addLandmarks3D(map, { partsUrl: BASE + 'data/landmark_parts.geojson' });
     map.setLayerZoomRange('landmark-parts', 12.5, 24);
   } catch (e) { console.info('특이 건물 없이 계속:', e.message); }
+  // ponytail: z13 부터 미리 만들면 z13 타일(건물 수십만 동)이 무거워 브라우저가 죽음(10/31 측정) → 13.5 부터. 더 빠르게는 z14 전용 타일·minzoom 14 로
   map.addLayer({ id: 'buildings', type: 'fill-extrusion', source: 'city', 'source-layer': 'b', minzoom: BUILD_Z, paint: {
     'fill-extrusion-color': buildColor(0, null, colors),
     'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': BUILD_OP,
