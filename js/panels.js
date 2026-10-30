@@ -3,7 +3,7 @@ import { sentence, demand, arsmCurve, lifeShown } from './model.js';
 
 export const RES = [
   { k: 'shelter', f: 'shelter_cap', name: '대피시설 수용 인원', short: '대피시설', unit: '명' },
-  { k: 'barrier', f: 'barrier_n', name: '물막이판(차수판)', short: '물막이판(차수판)', unit: '개소' },
+  { k: 'barrier', f: 'barrier_n', name: '물막이판', short: '물막이판', unit: '개소' },
   { k: 'pump', f: 'pump_lpm', name: '이동식 양수기', short: '이동식 양수기', unit: 'L/min' },
   { k: 'volunteers', f: 'volunteers', name: '의용소방대 · 자율방재단', short: '의용소방대 · 자율방재단', unit: '명' },
 ];
@@ -28,7 +28,7 @@ function toast(msg) {
 
 Chart.defaults.font.family = '"SeoulNamsan", "Malgun Gothic", sans-serif';
 Chart.defaults.font.weight = 500;
-Chart.defaults.font.size = 12;
+Chart.defaults.font.size = 14;
 Chart.defaults.color = '#5E5A54';
 Chart.defaults.animation = false;
 
@@ -47,7 +47,7 @@ const guides = {
     const py = y.getPixelForValue(1);
     ctx.beginPath(); ctx.moveTo(a.left, py); ctx.lineTo(a.right, py); ctx.stroke();
     ctx.setLineDash([]); ctx.fillStyle = '#8D0022'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-    ctx.font = '600 11px "SeoulNamsan", "Malgun Gothic", sans-serif';
+    ctx.font = '600 13px "SeoulNamsan", "Malgun Gothic", sans-serif';
     ctx.fillText('안전 마진 소진', a.left + 4, py - 2);
     const px = x.getPixelForValue(o.rain);
     ctx.strokeStyle = '#262626';
@@ -56,7 +56,7 @@ const guides = {
     ctx.fillText(`${o.rain} mm/h`, px + (ctx.textAlign === 'right' ? -4 : 4), a.top + 2);
     if (o.noDemand) { // 세로선보다 나중에 그려 글자가 위에 오게
       // 곡선은 위험이 시작되는 강우(약 55 mm/h 넘어)부터 있어 왼쪽 아래가 빔 → 거기에 씀
-      ctx.fillStyle = '#5E5A54'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '600 12px "SeoulNamsan", "Malgun Gothic", sans-serif';
+      ctx.fillStyle = '#5E5A54'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '600 14px "SeoulNamsan", "Malgun Gothic", sans-serif';
       const t = '인명 위해 인원 0명', ty = a.top + (a.bottom - a.top) * 0.80;
       ctx.fillStyle = '#FFFFFF'; ctx.fillRect(a.left + 4, ty - 10, ctx.measureText(t).width + 8, 20); // 강우 세로선이 글자를 지나가도 읽히게
       ctx.fillStyle = '#5E5A54'; ctx.fillText(t, a.left + 8, ty);

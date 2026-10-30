@@ -1,4 +1,4 @@
-// 계산 모듈(순수 함수): model.json(M) + 화면 상태 S → 대피 경보 · 양수기 · 차수판 · ARSM.
+// 계산 모듈(순수 함수): model.json(M) + 화면 상태 S → 대피 경보 · 양수기 · 물막이판 · ARSM.
 // S = {rain, cut, tau, mult: {shelter, barrier, pump, volunteers}}, mult 1 = 현재 보유량.
 // 페르소나 index: 0 재해취약자 · 1 아동 · 청소년 · 2 재해취약주택 거주민 · 3 야외 노동자 · 4 외국인 유학생 · 5 근로자.
 
@@ -46,9 +46,9 @@ function pumpedHists(M, S, gi, r) {
 }
 
 /**
- * 양수기 → 차수판 적용 후 인명 위해 노출 비율(%) at 강우 index r.
+ * 양수기 → 물막이판 적용 후 인명 위해 노출 비율(%) at 강우 index r.
  * P1 · P3 = RES 분포(0.30 · 0.15 m), P6 = COM 분포(0.50 m), P2 · P4 · P5 = M.life 그대로(EDU · 도로 분포 없음).
- * 차수판(P3 만, 반지하 출입구): 양수기 후 수심 ∈ [trigger, barrier_h) 인 RES 칸 비율 f 가 막을 수 있는 몫.
+ * 물막이판(P3 만, 반지하 출입구): 양수기 후 수심 ∈ [trigger, barrier_h) 인 RES 칸 비율 f 가 막을 수 있는 몫.
  *   counts[P3] = 반지하 가구. 막는 가구 = min(barrier_n × mult, f × counts[P3]) — 1개소 = 1가구(포스터 make_margin_1028).
  */
 function lifeAt(M, S, gi, p, r) {
@@ -68,9 +68,9 @@ function lifeAt(M, S, gi, p, r) {
 
 /**
  * 화면 · 수요에 쓰는 인명 위해 노출 비율(%) at 강우 index r — 포스터 표(M.life)에 자원 효과만 더한 꼴.
- * P1 · P3 · P6: M.life + (양수기 · 차수판 적용 hist % − 둘 다 0배 hist %), [0, 100]. 그 밖 = M.life.
- * 차수판 몫(P3)은 lifeAt 안에서 '막은 가구 ÷ 가구'로 빠지므로 × counts 하면 막은 가구만큼 줄어든 가구 수가 됨.
- * 양수기 · 차수판 자료가 없는 구는 차이가 정확히 0 → M.life 그대로(포스터와 같은 값).
+ * P1 · P3 · P6: M.life + (양수기 · 물막이판 적용 hist % − 둘 다 0배 hist %), [0, 100]. 그 밖 = M.life.
+ * 물막이판 몫(P3)은 lifeAt 안에서 '막은 가구 ÷ 가구'로 빠지므로 × counts 하면 막은 가구만큼 줄어든 가구 수가 됨.
+ * 양수기 · 물막이판 자료가 없는 구는 차이가 정확히 0 → M.life 그대로(포스터와 같은 값).
  */
 function shownAt(M, S, gi, p, r) {
   const base = M.life[gi][p][r];
@@ -126,7 +126,7 @@ export function alert(M, S, gi, p) {
   return { status: alertIn <= 0 ? 'late' : 'now', toDanger, alertIn, onset };
 }
 
-/** 페르소나별 위험 인원(명) = counts × shownAt(양수기 · 차수판 반영 노출 %) / 100. P3 은 가구라 × hh_size(2.2명, 포스터 make_scen_1028). */
+/** 페르소나별 위험 인원(명) = counts × shownAt(양수기 · 물막이판 반영 노출 %) / 100. P3 은 가구라 × hh_size(2.2명, 포스터 make_scen_1028). */
 export function demand(M, S, gi) {
   S = norm(S);
   const r = ri(M, S.rain);

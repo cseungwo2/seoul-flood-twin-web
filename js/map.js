@@ -273,9 +273,9 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
     'circle-stroke-width': ['case', ['==', ['get', '침수위험구역포함'], '포함'], 2, 1] } });
 
   map.addSource('mountains', { type: 'geojson', data: { type: 'FeatureCollection', features: MOUNTAINS.map(([name, x, y]) => ({ type: 'Feature', properties: { name }, geometry: { type: 'Point', coordinates: [x, y] } })) } });
-  map.addLayer({ id: 'mountains', type: 'symbol', source: 'mountains', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-offset': [0, -0.6] },
+  map.addLayer({ id: 'mountains', type: 'symbol', source: 'mountains', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 14, 'text-offset': [0, -0.6] },
     paint: { 'text-color': '#5C5A3C', 'text-halo-color': 'rgba(255,255,255,0.85)', 'text-halo-width': 1.4 } });
-  map.addLayer({ id: 'gu-label', type: 'symbol', source: 'gu', maxzoom: 13.5, layout: { 'text-field': ['get', 'gn'], 'text-font': ['Noto Sans Regular'], 'text-size': ['interpolate', ['linear'], ['zoom'], 9.5, 10.5, 12, 14] },
+  map.addLayer({ id: 'gu-label', type: 'symbol', source: 'gu', maxzoom: 13.5, layout: { 'text-field': ['get', 'gn'], 'text-font': ['Noto Sans Regular'], 'text-size': ['interpolate', ['linear'], ['zoom'], 9.5, 12.5, 12, 16] },
     paint: { 'text-color': '#262626', 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.4 } });
 
   // 고르기(마우스를 올리면 손가락 커서만, 내용은 클릭 → 오른쪽 패널)

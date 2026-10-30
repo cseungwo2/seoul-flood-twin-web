@@ -4,6 +4,7 @@ import { createMap } from './map.js';
 import { initPanels, RES } from './panels.js';
 import { createRain } from './rain.js';
 import { initRoute } from './route.js';
+import { initWeather } from './weather.js';
 
 const [M, meta] = await Promise.all(['data/model.json', 'data/meta.json'].map((u) => fetch(u).then((r) => r.json())));
 const Q = new URLSearchParams(location.search);
@@ -40,6 +41,8 @@ const onResFocus = (k, kind) => {
 };
 
 const panels = initPanels({ M, S, sel, onChange: () => schedule(), onSelect: (gi) => select(gi), onResFocus });
+// 상단 실시간 날씨: '실제 강우 적용' = 지난 1시간 강수를 강우 슬라이더에(0~174)
+initWeather((mm) => { const el = document.getElementById('s-rain'); el.value = Math.max(0, Math.min(174, Math.round(mm))); el.dispatchEvent(new Event('input')); });
 let twin = null;   // 지도는 없어도 됨: 패널 · 지표 · 문장은 model.json 만으로 먼저 그림
 const rainFx = createRain(document.getElementById('rain'));
 
