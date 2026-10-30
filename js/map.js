@@ -247,8 +247,11 @@ export async function createMap({ container, meta, noInfo, onSelect, view }) {
     map.setPaintProperty('gu-dim', 'fill-opacity', 0);
     if (narrow) map.fitBounds(seoul, { padding: 8, pitch: 0, bearing: 0 }); else map.flyTo({ ...home, duration: 1200 });
     back.hidden = true;
+    onSelect(null); // 서울 전체로 돌아가면 고른 구도 풂
   };
   back.addEventListener('click', unlift);
+  // 서울 밖(구가 없는 곳)을 누르면 서울 전체 보기로
+  map.on('click', (e) => { if (!api.routeMode && !map.queryRenderedFeatures(e.point, { layers: ['gu-fill'] }).length) unlift(); });
 
   let selected = null;
   const api = {
@@ -267,7 +270,7 @@ export async function createMap({ container, meta, noInfo, onSelect, view }) {
     setSelected(gi, fly = false) {
       if (selected != null) map.setFeatureState({ source: 'gu', id: selected }, { selected: false });
       selected = gi;
-      map.setFeatureState({ source: 'gu', id: gi }, { selected: true });
+      if (gi != null) map.setFeatureState({ source: 'gu', id: gi }, { selected: true });
       if (fly) lift(gi);
     },
   };

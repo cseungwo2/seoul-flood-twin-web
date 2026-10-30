@@ -9,7 +9,7 @@ const [M, meta] = await Promise.all(['data/model.json', 'data/meta.json'].map((u
 const Q = new URLSearchParams(location.search);
 const S = { rain: Q.has('rain') ? Math.max(0, Math.min(174, +Q.get('rain') || 0)) : 100, cut: M.cut_default, tau: M.tau_default,
   mult: { shelter: 0, barrier: 0, pump: 0, volunteers: 0 } }; // 처음엔 대응 자원 전부 꺼짐(포스터 값)
-let sel = Math.max(0, M.gn.indexOf(Q.get('gu') || '영등포구'));
+let sel = Q.has('gu') && M.gn.includes(Q.get('gu')) ? M.gn.indexOf(Q.get('gu')) : null; // 처음엔 서울 전체(고른 구 없음)
 const VIEWS = { yeouido: { center: [126.9375, 37.5218], zoom: 15, pitch: 62, bearing: -25 } };
 const noInfo = new Set(M.gn.map((_, gi) => gi).filter((gi) => M.res.shelter_cap[gi] == null));
 
@@ -82,19 +82,21 @@ function render() {
   for (let gi = 0; gi < M.gn.length; gi++) { for (const d of demand(M, S, gi)) people += d; saved += REC[gi].saved; }
   twin?.setRecover(REC.map((r) => (r.base > 0 ? Math.min(1, r.saved / r.base) : 0)));
   panels.kpi({ rain: S.rain, alertN: status.filter((s) => s !== 'safe').length, lateN: status.filter((s) => s === 'late').length, people, saved });
-  panels.gu(sel, A[sel]);
-  panels.arsm(sel); // 6곡선 계산 ≈ 1 ms → 늦추지 않고 매번 다시 그림
+  showSel(); // 6곡선 계산 ≈ 1 ms → 늦추지 않고 매번 다시 그림
+}
+function showSel() {
+  panels.pick(sel == null);
+  if (sel != null) { panels.gu(sel, A[sel]); panels.arsm(sel); }
 }
 function schedule() { if (!frame) frame = requestAnimationFrame(render); }
+/** gi = null → 고른 구 없음(서울 전체). */
 function select(gi) {
   sel = gi;
-  twin?.setSelected(gi, true);
-  document.getElementById('maphint').classList.add('off');
-  panels.gu(sel, A[sel]);
-  panels.arsm(sel);
+  twin?.setSelected(gi, gi != null);
+  if (gi != null) document.getElementById('maphint').classList.add('off');
+  showSel();
 }
 render();
-panels.arsm(sel);
 try {
   twin = await createMap({ container: 'map', meta, noInfo, view: VIEWS[Q.get('view')], onSelect: (gi) => select(gi) });
   twin.setSelected(sel);

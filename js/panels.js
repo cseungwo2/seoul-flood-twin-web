@@ -102,9 +102,9 @@ export function initPanels({ M, S, sel, onChange, onSelect, onResFocus }) {
       onResFocus(r.k, 'input'); onChange();
     };
     tog.addEventListener('change', () => {
-      const gi = +$('s-gu').value; // 고른 구에 이 자원 자료가 없으면 켜지 않고 알림만
-      if (tog.checked && M.res[r.f][gi] == null) { tog.checked = false; toast(`${M.gn[gi]} ${r.short} 정보 없음`); return; }
-      apply(); resNA(gi);
+      const v = $('s-gu').value, gi = v === '' ? null : +v; // 고른 구에 이 자원 자료가 없으면 켜지 않고 알림만
+      if (gi != null && tog.checked && M.res[r.f][gi] == null) { tog.checked = false; toast(`${M.gn[gi]} ${r.short} 정보 없음`); return; }
+      apply(); if (gi != null) resNA(gi);
     });
     el.addEventListener('input', () => { $(`o-${r.k}`).textContent = `${el.value} %`; apply(); });
     item.addEventListener('pointerenter', () => onResFocus(r.k, 'enter'));
@@ -123,8 +123,8 @@ export function initPanels({ M, S, sel, onChange, onSelect, onResFocus }) {
 
   // 구 고르기
   const guSel = $('s-gu');
-  guSel.innerHTML = M.gn.map((n, gi) => `<option value="${gi}">${n}</option>`).join('');
-  guSel.value = sel;
+  guSel.innerHTML = '<option value="" disabled>자치구 선택</option>' + M.gn.map((n, gi) => `<option value="${gi}">${n}</option>`).join('');
+  guSel.value = sel ?? '';
   guSel.addEventListener('change', () => onSelect(+guSel.value));
 
   // 그래프
@@ -164,6 +164,14 @@ export function initPanels({ M, S, sel, onChange, onSelect, onResFocus }) {
       $('k-alert').textContent = alertN; $('k-late').textContent = lateN; $('k-people').textContent = fmt(people);
     },
     /** 선택 구 문장 · 위험 인원(막대, 구 안 최대 = 꽉 참) · 자원 보유량. alerts = 그 구의 alert() 6개. */
+    /** 고른 구 없음(처음 · 서울 밖 클릭) = 안내 한 줄만, 있음 = 경보 · 안전 마진. */
+    pick(none) {
+      $('gu-pick').hidden = !none;
+      document.querySelectorAll('.panel.right > details').forEach((d) => { d.hidden = none; });
+      if (!none) return;
+      guSel.value = ''; $('gu-count').textContent = ''; $('cut-name').textContent = '침수 범위';
+      RES.forEach((r) => { $(`na-${r.k}`).hidden = true; });
+    },
     gu(gi, alerts) {
       guSel.value = gi; resNA(gi);
       $('cut-name').textContent = `${M.gn[gi]} 침수 범위`; // 고른 구 이름으로
