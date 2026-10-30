@@ -2,7 +2,7 @@
 import { addLandmarks3D } from './landmarks3d.js';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
-const BUILD_Z = 13.5;
+const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
 // 건물 불투명도(경로 볼 때 반투명 → 되돌릴 값). 서서히 나타나는 0.4줌 효과는 늦어 보여서 BUILD_Z 에서 바로 켜짐
 export const BUILD_OP = ['interpolate', ['linear'], ['zoom'], BUILD_Z - 0.05, 0, BUILD_Z, 0.92];
 const TILE_MAXZ = 14; // prep/build_tiles.mjs 의 MAXZ 와 같게. 더 확대하면 z14 타일을 늘려 씀(z18 까지 모양 차이 없음)
@@ -241,14 +241,15 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   const wsrc = map.getSource('water-depth');
 
   // 건물 · 도로: 정적 벡터 타일(prep/build_tiles.mjs, 레이어 b = 건물 · r = 도로) — 화면에 걸친 칸만 작업자가 받아 그림
-  map.addSource('city', { type: 'vector', tiles: [BASE + 'data/tiles/{z}/{x}/{y}.pbf'], minzoom: 13, maxzoom: TILE_MAXZ, bounds: seoul });
+  map.addSource('city', { type: 'vector', tiles: [BASE + 'data/tiles/{z}/{x}/{y}.pbf'], minzoom: 14, maxzoom: TILE_MAXZ, bounds: seoul }); // z13 타일은 안 받음(무거움)
   // 바탕 도로 면: OSM 도로 중심선을 등급별 폭(대략 실제 m, 줌 따라 2배씩)으로 그어 도로 면 자료가 빈 곳도 길이 보이게(중앙선만 떠 있는 곳 없앰)
-  const roadW = (m) => ['interpolate', ['exponential', 2], ['zoom'], BUILD_Z, m * 0.12, 18, m * 2.6];
+  // 줌 보간은 식의 맨 바깥에 한 번만 허용 → 줌 보간 안에서 등급별 폭(match)을 고름
+  const CLS_W = (k) => ['match', ['get', 'class'], ['motorway', 'trunk'], 24 * k, 'primary', 20 * k, 'secondary', 15 * k, 'tertiary', 11 * k, 'minor', 7 * k, 4 * k];
   map.addLayer({ id: 'roads-line', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation', minzoom: BUILD_Z,
     filter: ['all', ['==', ['geometry-type'], 'LineString'], ['in', ['get', 'class'], ['literal', ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service']]], ['!=', ['get', 'brunnel'], 'tunnel']],
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': ['match', ['get', 'class'], ['motorway', 'trunk'], '#55585D', ['primary', 'secondary'], '#606368', '#787B80'],
-      'line-width': ['match', ['get', 'class'], ['motorway', 'trunk'], roadW(24), 'primary', roadW(20), 'secondary', roadW(15), 'tertiary', roadW(11), 'minor', roadW(7), roadW(4)] } }, firstSymbol);
+      'line-width': ['interpolate', ['exponential', 2], ['zoom'], BUILD_Z, CLS_W(0.12), 18, CLS_W(2.6)] } }, firstSymbol);
   map.addLayer({ id: 'roads', type: 'fill', source: 'city', 'source-layer': 'r', minzoom: BUILD_Z, paint: {
     'fill-color': ['match', ['get', 'class'], '고속', '#55585D', '간선', '#606368', '#787B80'], 'fill-outline-color': '#4A4D51' } }, firstSymbol); // 아스팔트
   map.addLayer({ id: 'water-depth', type: 'raster', source: 'water-depth', paint: { 'raster-opacity': 0.85, 'raster-fade-duration': 0, 'raster-resampling': 'nearest' } }, firstSymbol);

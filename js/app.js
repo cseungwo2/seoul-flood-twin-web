@@ -8,7 +8,7 @@ import { initWeather } from './weather.js';
 
 const [M, meta] = await Promise.all(['data/model.json', 'data/meta.json'].map((u) => fetch(u).then((r) => r.json())));
 const Q = new URLSearchParams(location.search);
-const S = { rain: Q.has('rain') ? Math.max(0, Math.min(174, +Q.get('rain') || 0)) : 100,
+const S = { rain: Q.has('rain') ? Math.max(0, Math.min(174, +Q.get('rain') || 0)) : 0, // 처음엔 강우 0(슬라이더 0부터)
   mult: { shelter: 0, barrier: 0, pump: 0, volunteers: 0 }, zone: 0 }; // zone = 지도에 예상 피해 지역을 켠 시민 유형 비트(1 << p, 처음엔 모두 끔) // 처음엔 대응 자원 전부 꺼짐(포스터 값)
 let sel = Q.has('gu') && M.gn.includes(Q.get('gu')) ? M.gn.indexOf(Q.get('gu')) : null; // 처음엔 서울 전체(고른 구 없음)
 const VIEWS = { yeouido: { center: [126.9375, 37.5218], zoom: 15, pitch: 62, bearing: -25 } };

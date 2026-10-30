@@ -92,8 +92,8 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
   $('res').innerHTML = '<div class="sec grp">대응 자원</div>' + RES.map((r) => {
     return `<details class="sec sec-res res-item off" open><summary><span>${r.name}</span>
       <input type="checkbox" role="switch" class="tog" id="t-${r.k}" aria-label="${r.name} 켜기"></summary>
-      <label class="row" for="s-${r.k}"><span>현 보유량 대비</span><output id="o-${r.k}">100 %</output></label>
-      <input id="s-${r.k}" type="range" min="0" max="300" step="10" value="100" disabled>
+      <label class="row" for="s-${r.k}"><span>현 보유량 대비</span><output id="o-${r.k}">0 %</output></label>
+      <input id="s-${r.k}" type="range" min="0" max="300" step="10" value="0" disabled>
       <p class="res-na" id="na-${r.k}" hidden></p>${r.k === 'volunteers' ? '<dl class="vol" id="vol-plan" hidden></dl>' : ''}</details>`;
   }).join('');
   if (narrow) document.querySelectorAll('.sec-judge, .sec-res').forEach((d) => { d.open = false; });
