@@ -42,15 +42,28 @@ function restyle(style) {
   return style;
 }
 
-/** flood_onset.png → 강우마다 다시 칠하는 canvas. R/G/B = 0.15/0.30/0.50 m 에 처음 닿는 실제 강우, 255 = 안 닿음, A 0 = 바깥. */
-async function waterCanvas() {
-  const blob = await (await fetch(BASE + 'data/flood_onset.png')).blob();
-  const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+/** web/data 의 png → ImageData(색 보정 · 미리 곱하기 없이 원값 그대로). */
+async function pngData(name) {
+  const bmp = await createImageBitmap(await (await fetch(BASE + 'data/' + name)).blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  const c = new OffscreenCanvas(bmp.width, bmp.height), x = c.getContext('2d');
+  x.drawImage(bmp, 0, 0);
+  return x.getImageData(0, 0, bmp.width, bmp.height);
+}
+
+/** gu_id.png(R = 구 번호 model gn 순서, A 0 = 서울 밖) → 칸별 구 번호, 255 = 밖. flood_onset.png 와 같은 틀. */
+async function guIds() {
+  const { data, width, height } = await pngData('gu_id.png'), n = width * height, gid = new Uint8Array(n).fill(255);
+  for (let i = 0; i < n; i++) if (data[i * 4 + 3]) gid[i] = data[i * 4];
+  return gid;
+}
+
+/** flood_onset.png → 강우마다 다시 칠하는 canvas. R/G/B = 0.15/0.30/0.50 m 에 처음 닿는 실제 강우, 255 = 안 닿음, A 0 = 바깥.
+ *  draw(rain, pumpL): pumpL[gi] = 양수기가 깎은 수위(cm, model pumpLevelCm) · null = 그대로. 그 구 칸은 L 보다 깊은 등급을 L 의 등급으로 낮춤. */
+async function waterCanvas(gid) {
+  const bmp = await pngData('flood_onset.png'), src = bmp.data;
   const canvas = document.createElement('canvas');
   canvas.width = bmp.width; canvas.height = bmp.height;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(bmp, 0, 0);
-  const src = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
   const n = bmp.width * bmp.height;
   // 칸마다 하나의 값만 보면 되게: 칸 i 가 깊음/중간/얕음이 되는 강우를 미리 꺼내 둠
   const r = new Uint8Array(n), g = new Uint8Array(n), b = new Uint8Array(n), wet = [];
@@ -63,12 +76,16 @@ async function waterCanvas() {
   const img = ctx.createImageData(bmp.width, bmp.height);
   const out = new Uint32Array(img.data.buffer);
   return {
-    canvas, deep, w: bmp.width, h: bmp.height,
-    draw(rain) {
+    canvas, deep, g, b, w: bmp.width, h: bmp.height,
+    draw(rain, pumpL = []) {
       out.fill(0);
+      // 구별 가장 깊게 칠할 등급(0 = 0.50 m · 1 = 0.30 m · 2 = 0.15 m): L ≥ 50 → 0(그대로), 30 ≤ L < 50 → 1, L < 30 → 2(L ≥ trigger 15)
+      const top = new Uint8Array(256);
+      pumpL.forEach((L, gi) => { if (L != null) top[gi] = L >= 50 ? 0 : L >= 30 ? 1 : 2; });
       for (let k = 0; k < idx.length; k++) {
         const i = idx[k];
-        out[i] = b[i] <= rain ? WATER[0] : g[i] <= rain ? WATER[1] : r[i] <= rain ? WATER[2] : 0;
+        const c = b[i] <= rain ? 0 : g[i] <= rain ? 1 : r[i] <= rain ? 2 : 3;
+        out[i] = c > 2 ? 0 : WATER[Math.max(c, top[gid[i]])];
       }
       ctx.putImageData(img, 0, 0);
     },
@@ -77,14 +94,11 @@ async function waterCanvas() {
 
 /** persona_onset_a/b.png(R G B = 시민 유형 0 1 2 / 3 4 5) → 예상 피해 지역 canvas. 칸값 = 그 유형 생활 공간이 인명 위해 수심에 처음 닿는 강우, 255 = 아님 · 안 닿음.
  *  draw(rain, mask, rad): mask = 켠 유형 비트(1 << p), 0 = 아무것도 안 그림. 칸에 켠 유형이 여럿이면 먼저 잠기는 유형(같으면 앞 번호).
- *  rad = 칸을 사방 rad 칸 넓혀 칠함(구 전체 줌에서 20 m 칸이 1 px 아래로 사라지지 않게 — 표시용, 판정은 칸 그대로). */
-async function zoneCanvas(colors) {
-  const px = await Promise.all(['a', 'b'].map(async (k) => {
-    const bmp = await createImageBitmap(await (await fetch(`${BASE}data/persona_onset_${k}.png`)).blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-    const c = new OffscreenCanvas(bmp.width, bmp.height), x = c.getContext('2d');
-    x.drawImage(bmp, 0, 0);
-    return x.getImageData(0, 0, bmp.width, bmp.height);
-  }));
+ *  rad = 칸을 사방 rad 칸 넓혀 칠함(구 전체 줌에서 20 m 칸이 1 px 아래로 사라지지 않게 — 표시용, 판정은 칸 그대로).
+ *  block[gi] = 물막이판이 막은 P3 몫(model barrierShare, null = 없음), bh[gi] = 물막이판 높이(m). gid · wg · wb = 구 번호 · 0.30 · 0.50 m 도달 강우(flood_onset).
+ *  only = 고른 구(그 구 칸만 칠함), null = 서울 전체. */
+async function zoneCanvas(colors, gid, wg, wb) {
+  const px = await Promise.all(['a', 'b'].map((k) => pngData(`persona_onset_${k}.png`)));
   const { width: W, height: H } = px[0], n = W * H;
   const on = [0, 1, 2, 3, 4, 5].map(() => new Uint8Array(n));
   for (let p = 0; p < 6; p++) { const d = px[p < 3 ? 0 : 1].data, c = p % 3; for (let i = 0; i < n; i++) on[p][i] = d[i * 4 + 3] ? d[i * 4 + c] : 255; }
@@ -95,14 +109,38 @@ async function zoneCanvas(colors) {
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d'), img = ctx.createImageData(W, H), out = new Uint32Array(img.data.buffer);
+  const p3 = Uint32Array.from(cells.filter((i) => on[2][i] < 255)), cut = new Uint8Array(n);
+  /** 물막이판이 막은 P3 칸(1). 구마다 '잠긴 P3 칸 수 × 몫'(반올림)만큼, 막을 수 있는 칸 중 얕은 칸부터 뺌.
+   *  막을 수 없는 칸 = 물막이판 높이 이상이 확실한 칸(bh ≤ 0.30 → 0.30 m 도달 칸, bh ≤ 0.50 → 0.50 m 도달 칸).
+   *  얕은 순서 = 수심 등급(0.15~0.30 → 0.30~0.50 → 0.50~) → 0.15 m 에 늦게 닿은 칸 먼저 → 칸 번호(결정적). */
+  function blockedP3(rain, block, bh) {
+    cut.fill(0);
+    if (!block.some((v) => v > 0)) return null;
+    const wet = new Uint32Array(256), keys = block.map(() => []);
+    for (let k = 0; k < p3.length; k++) {
+      const i = p3[k], gi = gid[i];
+      if (on[2][i] > rain || !(block[gi] > 0)) continue;
+      wet[gi]++;
+      const cls = wb[i] <= rain ? 2 : wg[i] <= rain ? 1 : 0;
+      if ((cls === 2 && bh[gi] <= 0.5) || (cls >= 1 && bh[gi] <= 0.3)) continue;
+      keys[gi].push(cls * 2 ** 30 + (255 - on[2][i]) * 2 ** 22 + i); // 칸 번호 i < 2²² (1854 × 1521)
+    }
+    keys.forEach((ks, gi) => {
+      const a = Float64Array.from(ks).sort(), m = Math.min(a.length, Math.round(block[gi] * wet[gi]));
+      for (let k = 0; k < m; k++) cut[a[k] % 2 ** 22] = 1;
+    });
+    return cut;
+  }
   return {
     canvas,
-    draw(rain, mask, rad = 0) {
+    draw(rain, mask, rad = 0, block = [], bh = [], only = null) {
       out.fill(0);
+      const cut = (mask >> 2) & 1 ? blockedP3(rain, block, bh) : null;
       for (let k = 0; mask && k < idx.length; k++) {
         const i = idx[k];
+        if (only != null && gid[i] !== only) continue;
         let b = 255, bp = -1;
-        for (let p = 0; p < 6; p++) if ((mask >> p) & 1 && on[p][i] < b) { b = on[p][i]; bp = p; }
+        for (let p = 0; p < 6; p++) if ((mask >> p) & 1 && on[p][i] < b && !(p === 2 && cut?.[i])) { b = on[p][i]; bp = p; }
         if (bp < 0 || b > rain) continue;
         const c = abgr[bp], x = i % W, y = (i - x) / W;
         for (let yy = Math.max(0, y - rad); yy <= Math.min(H - 1, y + rad); yy++)
@@ -124,13 +162,6 @@ function buildColor(rain, mask, colors) {
     ['case', ['>', ['var', 'm'], rain], BUILD_GREY, ...ps.slice(0, -1).flatMap((p) => [['==', onP(p), ['var', 'm']], colors[p]]), colors[last]]];
 }
 
-function hatch() {
-  const c = document.createElement('canvas'); c.width = c.height = 8;
-  const x = c.getContext('2d');
-  x.strokeStyle = '#262626'; x.lineWidth = 1;
-  x.beginPath(); x.moveTo(0, 8); x.lineTo(8, 0); x.moveTo(-2, 2); x.lineTo(2, -2); x.moveTo(6, 10); x.lineTo(10, 6); x.stroke();
-  return x.getImageData(0, 0, 8, 8);
-}
 
 const bboxOf = (geom) => {
   const b = [180, 90, -180, -90];
@@ -140,11 +171,11 @@ const bboxOf = (geom) => {
 };
 
 /**
- * createMap({ container, meta, noInfo: Set<gi>, onSelect(gi), view? })
+ * createMap({ container, meta, onSelect(gi), view?, colors, barrierH })
 * colors = 시민 유형 6색(panels TWIN_COLORS → M.persona[].color)
- * → Promise<{ map, setRain(r, zoneMask), setClass(clsByGi), setHatch(gis), setSelected(gi) }>
+ * → Promise<{ map, setRain(r, zoneMask), setSelected(gi) }>
  */
-export async function createMap({ container, meta, noInfo, onSelect, view, colors }) {
+export async function createMap({ container, meta, onSelect, view, colors, barrierH = [] }) {
   const [style, gu, shelters] = await Promise.all([
     fetch('https://tiles.openfreemap.org/styles/positron').then((r) => r.json()),
     fetch(BASE + 'data/gu.geojson').then((r) => r.json()),
@@ -157,11 +188,14 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
   const map = new maplibregl.Map({
     container, style: restyle(style), ...camera,
     maxBounds: [[126.55, 37.30], [127.40, 37.82]], minZoom: 9, maxPitch: 70,
+    bearingDegreesPerPixelMoved: 0.35, pitchDegreesPerPixelMoved: -0.25, // 오른쪽 끌기 회전 · 기울기 감도(기본 0.8 · −0.5의 약 절반)
     localIdeographFontFamily: '"SeoulNamsan", "Malgun Gothic", sans-serif', attributionControl: { compact: true },
     cooperativeGestures: narrow, preserveDrawingBuffer: new URLSearchParams(location.search).has('shot'),
     locale: { 'CooperativeGesturesHandler.MobileHelpText': '지도는 두 손가락으로 움직입니다', 'CooperativeGesturesHandler.WindowsHelpText': 'Ctrl + 스크롤로 확대 · 축소', 'CooperativeGesturesHandler.MacHelpText': '⌘ + 스크롤로 확대 · 축소' },
   });
   if (view) map.jumpTo(view);
+  map.scrollZoom.setWheelZoomRate(1 / 900); // 휠 확대 감도(기본 1/450의 절반)
+  map.dragPan.enable({ linearity: 0.3, easing: (t) => 1 - (1 - t) ** 3, maxSpeed: 700, deceleration: 4000 }); // 왼쪽 끌기 뒤 미끄러짐 줄임(기본 1400 · 2500)
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
   await new Promise((res) => map.on('load', res));
   if (narrow) map.getContainer().querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
@@ -199,7 +233,8 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
   const firstSymbol = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
 
   // 물: 강우가 바뀔 때만 canvas 를 다시 칠하고 한 프레임만 올림(play → 그린 뒤 pause)
-  const water = await waterCanvas();
+  const gid = await guIds();
+  const water = await waterCanvas(gid);
   water.draw(0);
   map.addSource('water-depth', { type: 'canvas', canvas: water.canvas, coordinates: meta.onset_corners, animate: false });
   const wsrc = map.getSource('water-depth');
@@ -210,17 +245,18 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
     'fill-color': ['match', ['get', 'class'], '고속', '#55585D', '간선', '#606368', '#787B80'], 'fill-outline-color': '#4A4D51' } }, firstSymbol); // 아스팔트
   map.addLayer({ id: 'water-depth', type: 'raster', source: 'water-depth', paint: { 'raster-opacity': 0.85, 'raster-fade-duration': 0, 'raster-resampling': 'nearest' } }, firstSymbol);
   // 예상 피해 지역(시민 유형 생활 공간이 인명 위해 수심에 잠기는 칸): 서울 전체 줌에선 너무 잘아 숨기고, 구를 띄우면(≈ 11.5~) 보임. 건물이 서면 건물 색이 이어받아 옅게
-  const zone = await zoneCanvas(colors);
+  const zone = await zoneCanvas(colors, gid, water.g, water.b);
   map.addSource('persona-zone', { type: 'canvas', canvas: zone.canvas, coordinates: meta.onset_corners, animate: false });
   const zsrc = map.getSource('persona-zone');
   // ponytail: 줌 단계 3개로 넓힘(z < 12.5 → 2칸, < BUILD_Z → 1칸, 그 위 0). 더 매끈하게는 줌마다 rad 를 연속으로
   const zoneRad = () => (map.getZoom() < 12.5 ? 2 : map.getZoom() < BUILD_Z ? 1 : 0);
-  let zoneState = { rain: 0, pick: 0, rad: -1 }; // pick = 켠 유형 비트
+  let zoneState = { rain: 0, pick: 0, rad: -1, block: [], only: null }; // pick = 켠 유형 비트, block = 구별 물막이판 몫, only = 고른 구
   const drawZone = (st) => {
-    if (st.rain === zoneState.rain && st.pick === zoneState.pick && st.rad === zoneState.rad) return false;
-    zoneState = st; zone.draw(st.rain, st.pick, st.rad); return true;
+    if (['rain', 'pick', 'rad', 'block', 'only'].every((k) => st[k] === zoneState[k])) return false;
+    zoneState = st; zone.draw(st.rain, st.pick, st.rad, st.block, barrierH, st.only); return true;
   };
-  map.on('zoomend', () => { if (drawZone({ ...zoneState, rad: zoneRad() })) { zsrc.play(); map.once('render', () => zsrc.pause()); } });
+  const redrawZone = (ch) => { if (drawZone({ ...zoneState, ...ch })) { zsrc.play(); map.once('render', () => zsrc.pause()); } };
+  map.on('zoomend', () => redrawZone({ rad: zoneRad() }));
   map.addLayer({ id: 'persona-zone', type: 'raster', source: 'persona-zone', paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 11, 0, 11.6, 0.85, BUILD_Z, 0.85, BUILD_Z + 0.4, 0.45],
     'raster-fade-duration': 0, 'raster-resampling': 'nearest' } }, firstSymbol);
 
@@ -233,19 +269,10 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
   map.addLayer({ id: 'center-dash', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation', minzoom: BUILD_Z, filter: onRoad(['tertiary']),
     paint: { 'line-color': '#F2C200', 'line-width': w(0.5, 1.6), 'line-dasharray': [4, 3] } }, 'water-depth');
 
-  map.addImage('hatch', hatch());
   map.addSource('gu', { type: 'geojson', data: gu, promoteId: 'gi' });
-  // 구 색 = 가장 급한 시민 유형의 '대피 경보까지 남은 시간' 등급(app.js alertClass): 0 대피 시간 부족 · 1 ≤15분 · 2 15~25 · 3 25~35 · 4 >35 · 5 위험 없음
-  const cls = ['coalesce', ['feature-state', 'cls'], 5];
-  const op = (k) => ['match', cls, 0, 0.70 * k, 1, 0.55 * k, 2, 0.40 * k, 3, 0.25 * k, 4, 0.12 * k, 0];
-  // 지형 음영 · OSM 물 아래에 깔아 색이 지형과 섞이고, 침수 물(0.85)은 그 위
-  map.addLayer({ id: 'gu-fill', type: 'fill', source: 'gu', paint: {
-    'fill-color': '#8D0022', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 11.5, op(1), 13.5, op(0.25)] } }, map.getLayer('hillshade') ? 'hillshade' : firstSymbol);
-  // 회복 구역: 켠 대응 자원으로 위험 인원이 줄어든 비율(0~1) → 초록. 자원이 다 꺼지면 안 보임
-  map.addLayer({ id: 'gu-recover', type: 'fill', source: 'gu', paint: {
-    'fill-color': '#2E7D4F', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 11.5, ['*', 0.65, ['coalesce', ['feature-state', 'rec'], 0]], 13.5, ['*', 0.25, ['coalesce', ['feature-state', 'rec'], 0]]] } }, firstSymbol);
-  map.addLayer({ id: 'gu-hatch', type: 'fill', source: 'gu', filter: ['in', ['get', 'gi'], ['literal', [...noInfo]]],
-    paint: { 'fill-pattern': 'hatch', 'fill-opacity': 0.15 } }, firstSymbol);
+  // 구 색 없음(10/31 승우: 판정은 오른쪽 패널로). 투명 면은 구 클릭 · 구 찾기(queryRenderedFeatures)용으로만 둠
+  map.addLayer({ id: 'gu-fill', type: 'fill', source: 'gu', paint: { 'fill-color': '#000', 'fill-opacity': 0 } }, map.getLayer('hillshade') ? 'hillshade' : firstSymbol);
+  // 지도 색 = 침수 수심 · 예상 피해 지역 · 대피시설만(10/31 승우: 회복 구역 · 정보 없음 빗금 뺌)
   const sel = ['boolean', ['feature-state', 'selected'], false];
   map.addLayer({ id: 'gu-line', type: 'line', source: 'gu', paint: {
     'line-color': ['case', sel, '#8D0022', '#8C857A'], 'line-width': ['case', sel, 2.6, 0.9] } }, firstSymbol);
@@ -287,9 +314,7 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
   map.addSource('seoul-mask', { type: 'geojson', data: BASE + 'data/seoul_mask.geojson' });
   map.addLayer({ id: 'seoul-mask', type: 'fill', source: 'seoul-mask', paint: { 'fill-color': '#F2EEE7' } });
 
-  // 고른 구 띄우기: 구로 날아가 기울이고, 테두리에 은은한 빛(번진 선)을 두르고, 다른 구는 흐리게
-  map.addLayer({ id: 'gu-dim', type: 'fill', source: 'gu', filter: ['==', ['get', 'gi'], -1],
-    paint: { 'fill-color': '#F2EEE7', 'fill-opacity': 0, 'fill-opacity-transition': { duration: 700 } } }, 'seoul-mask');
+  // 고른 구 띄우기: 구로 날아가 기울이고, 테두리에 은은한 빛(번진 선). 다른 구는 흐리게 하지 않음(바로 옆 구로 옮겨 보기 쉽게, 10/31)
   const glow = (id, width, blur, op) => map.addLayer({ id, type: 'line', source: 'gu', filter: ['==', ['get', 'gi'], -1], layout: { 'line-join': 'round' },
     paint: { 'line-color': '#8D0022', 'line-width': width, 'line-blur': blur, 'line-opacity': 0, 'line-opacity-transition': { duration: 900 } } }, 'seoul-mask');
   glow('gu-glow', 18, 14, 0.35);
@@ -299,8 +324,6 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
   const back = document.getElementById('mapback');
   const lift = (gi) => {
     for (const id of Object.keys(GLOW)) { map.setFilter(id, ['==', ['get', 'gi'], gi]); map.setPaintProperty(id, 'line-opacity', 0); }
-    map.setFilter('gu-dim', ['!=', ['get', 'gi'], gi]);
-    map.setPaintProperty('gu-dim', 'fill-opacity', 0.65);
     const b = guBox.find((g) => g.gi === gi).b;
     map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 70, pitch: narrow ? 0 : 52, bearing: map.getBearing(), duration: 1200 });
     map.once('moveend', () => { for (const [id, op] of Object.entries(GLOW)) map.setPaintProperty(id, 'line-opacity', op); });
@@ -308,7 +331,6 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
   };
   const unlift = () => {
     for (const id of Object.keys(GLOW)) map.setPaintProperty(id, 'line-opacity', 0);
-    map.setPaintProperty('gu-dim', 'fill-opacity', 0);
     if (narrow) map.fitBounds(seoul, { padding: 8, pitch: 0, bearing: 0 }); else map.flyTo({ ...home, duration: 1200 });
     back.hidden = true;
     onSelect(null); // 서울 전체로 돌아가면 고른 구도 풂
@@ -321,22 +343,20 @@ export async function createMap({ container, meta, noInfo, onSelect, view, color
   const api = {
     map, routeMode: false, base: BASE, guBox, shelters,
     water: { deep: water.deep, w: water.w, h: water.h, corners: meta.onset_corners },
-    /** pick = 예상 피해 지역을 켠 시민 유형 비트(0 = 끔). 강우 · 켠 유형이 바뀔 때만 부름. */
-    setRain(r, pick = 0) {
-      water.draw(r); drawZone({ rain: r, pick, rad: zoneRad() });
+    /** pick = 예상 피해 지역을 켠 시민 유형 비트(0 = 끔). 강우 · 켠 유형 · 양수기 · 물막이판이 바뀔 때만 부름.
+     *  pumpL[gi] = model pumpLevelCm, block[gi] = model barrierShare(구별, null = 효과 없음). */
+    setRain(r, pick = 0, pumpL = [], block = []) {
+      water.draw(r, pumpL); drawZone({ rain: r, pick, rad: zoneRad(), block, only: selected });
       wsrc.play(); zsrc.play();
       map.once('render', () => { wsrc.pause(); zsrc.pause(); });
       map.setPaintProperty('buildings', 'fill-extrusion-color', buildColor(r, pick, colors));
     },
-    setClass(cl) { cl.forEach((c, gi) => map.setFeatureState({ source: 'gu', id: gi }, { cls: c })); },
-    setRecover(share) { share.forEach((v, gi) => map.setFeatureState({ source: 'gu', id: gi }, { rec: v })); },
-    /** 빗금 = 지금 보는 자원이 '정보 없음'인 구. */
-    setHatch(gis) { map.setFilter('gu-hatch', ['in', ['get', 'gi'], ['literal', gis]]); },
     /** fly = 사용자가 고름 → 그 구로 날아가 띄움. 처음 그릴 때는 표시만. */
     setSelected(gi, fly = false) {
       if (selected != null) map.setFeatureState({ source: 'gu', id: selected }, { selected: false });
       selected = gi;
       if (gi != null) map.setFeatureState({ source: 'gu', id: gi }, { selected: true });
+      redrawZone({ only: gi }); // 예상 피해 지역 = 고른 구 칸만(없으면 서울 전체)
       if (fly) lift(gi);
     },
   };

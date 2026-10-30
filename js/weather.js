@@ -8,7 +8,8 @@ export function initWeather(onApply) {
   let rain = null;
   const clock = () => {
     const d = new Date(), p = (n) => String(n).padStart(2, '0');
-    $('wx-time').textContent = `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}(${DAY[d.getDay()]}) ${p(d.getHours())}:${p(d.getMinutes())}`;
+    $('wx-date').textContent = `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}(${DAY[d.getDay()]})`;
+    $('wx-time').textContent = `${p(d.getHours())}:${p(d.getMinutes())}`;
   };
   const load = async () => {
     try {
@@ -16,8 +17,8 @@ export function initWeather(onApply) {
       // hourly 강수 = 그 시각까지 지난 1시간 합(mm) → 지금 시각(정시 내림)의 값
       const hour = j.current.time.slice(0, 13) + ':00', i = j.hourly.time.indexOf(hour);
       rain = i < 0 ? j.hourly.precipitation.at(-1) : j.hourly.precipitation[i];
-      $('wx-temp').textContent = `${j.current.temperature_2m.toFixed(1)}℃`;
-      $('wx-rain').textContent = `${rain.toFixed(1)} mm`;
+      $('wx-temp').textContent = j.current.temperature_2m.toFixed(1);
+      $('wx-rain').textContent = rain.toFixed(1);
       $('wx').hidden = false;
     } catch (e) { console.info('날씨 없이 계속:', e.message); $('wx').hidden = true; }
   };

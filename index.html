@@ -16,16 +16,17 @@
 <header class="top">
   <h1 class="sr">서울 침수 안전 마진 디지털 트윈</h1>
   <dl class="kpi" aria-live="polite">
-    <div><dt>대피 경보 필요 자치구</dt><dd><b id="k-alert">0</b><span>개 구</span></dd></div>
-    <div><dt>대피 시간 부족 자치구</dt><dd><b id="k-late">0</b><span>개 구</span></dd></div>
-    <div><dt>침수 노출 인원</dt><dd><b id="k-people">0</b><span>명</span></dd></div>
+    <div><dt>대피 필요 자치구</dt><dd><b id="k-alert">0</b><span>개 구</span></dd></div>
+    <div><dt>즉시 대피 자치구</dt><dd><b id="k-late">0</b><span>개 구</span></dd></div>
+    <div><dt>대피 인원</dt><dd><b id="k-people">0</b><span>명</span></dd></div>
     <div><dt>대응 자원 회복 인원</dt><dd><b id="k-saved">0</b><span>명</span></dd></div>
   </dl>
-  <div class="wx" id="wx" hidden aria-live="polite">
-    <p class="wx-t" id="wx-time"></p>
-    <p class="wx-v">서울 <b id="wx-temp"></b> · 지난 1시간 강수 <b id="wx-rain"></b></p>
-    <button type="button" id="wx-apply">실제 강우 적용</button>
-  </div>
+  <dl class="kpi wx" id="wx" hidden aria-live="polite">
+    <div><dt id="wx-date"></dt><dd><b id="wx-time"></b></dd></div>
+    <div><dt>서울 기온</dt><dd><b id="wx-temp"></b><span>℃</span></dd></div>
+    <div><dt>1시간 강수</dt><dd><b id="wx-rain"></b><span>mm</span></dd></div>
+    <div class="wx-act"><button type="button" id="wx-apply">실제 강우 적용</button></div>
+  </dl>
 </header>
 
 <main class="grid">
@@ -40,15 +41,6 @@
         <button type="button" data-rain="174"><b>174</b> mm/h</button>
       </div>
     </details>
-    <details class="sec sec-judge" open>
-      <summary>대피 판단</summary>
-      <label class="row" for="s-cut"><span id="cut-name">자치구 침수 범위</span><output id="o-cut">생활 공간의 5 %</output></label>
-      <input id="s-cut" type="range" min="1" max="20" step="1" value="5">
-      <p class="hint">집·일터 같은 생활 공간 중 이만큼이 사람이 다칠 수 있는 깊이로 잠기면 '위험'으로 봅니다</p>
-      <label class="row" for="s-tau"><span>경보 후 대피를 마치는 데 걸리는 시간</span><output id="o-tau">10분</output></label>
-      <input id="s-tau" type="range" min="5" max="30" step="1" value="10">
-      <p class="hint">위험해지기 이만큼 전에는 경보가 나가야 대피를 마칠 수 있습니다. 늘리면 경보를 더 일찍 내려야 합니다</p>
-    </details>
     <div id="res"></div>
   </aside>
   <div class="gutter" data-side="left" role="separator" aria-orientation="vertical" aria-label="왼쪽 패널 폭" tabindex="0"><button type="button" class="fold" aria-label="왼쪽 패널 접기">‹</button></div>
@@ -62,17 +54,6 @@
     <p class="mapfail" id="mapfail" hidden>지도를 불러오지 못했습니다 — 계산 결과는 그대로 볼 수 있습니다</p>
     <details class="legend" id="legend">
       <summary>범례</summary>
-      <p class="lgt">대피 경보까지 남은 시간</p>
-      <div class="lgrid">
-        <div class="lg"><i class="sw c0"></i>대피 시간 부족</div>
-        <div class="lg"><i class="sw c1"></i>15분 이내</div>
-        <div class="lg"><i class="sw c2"></i>15~25분</div>
-        <div class="lg"><i class="sw c3"></i>25~35분</div>
-        <div class="lg"><i class="sw c4"></i>35분 초과</div>
-        <div class="lg"><i class="sw safe"></i>경보 기준 미만</div>
-      </div>
-      <div class="lg full"><i class="sw hatch"></i><span id="lg-hatch">대피시설 정보 없음(회신 없음)</span></div>
-      <div class="lg full"><i class="sw rec"></i>회복 구역 (켠 대응 자원으로 줄어든 위험, 진할수록 많이)</div>
       <div class="lg full" id="lg-zone"><i class="sw"></i><span>예상 피해 지역(시민 유형별 색)</span></div>
       <p class="lgh" id="lg-zone-h">생활 공간이 사람이 다칠 깊이로 잠기는 곳 · 확대하면 건물 색</p>
       <p class="lgt">침수 수심</p>
@@ -83,7 +64,6 @@
         <div class="lg" id="lg-shelter"><i class="dot"></i>대피시설</div>
       </div>
     </details>
-    <p class="maphint" id="maphint">구를 누르면 오른쪽에 시민 유형별 경보가 나옵니다</p>
   </section>
   <div class="gutter" data-side="right" role="separator" aria-orientation="vertical" aria-label="오른쪽 패널 폭" tabindex="0"><button type="button" class="fold" aria-label="오른쪽 패널 접기">›</button></div>
 

@@ -1,5 +1,5 @@
 // 계산 모듈(순수 함수): model.json(M) + 화면 상태 S → 대피 경보 · 양수기 · 물막이판 · ARSM.
-// S = {rain, cut, tau, mult: {shelter, barrier, pump, volunteers}}, mult 1 = 현재 보유량.
+// S = {rain, mult: {shelter, barrier, pump, volunteers}}, mult 1 = 현재 보유량. 대피 시간은 M.evac(유형별 고정값).
 // 페르소나 index: 0 재해취약자 · 1 아동 · 청소년 · 2 재해취약주택 거주민 · 3 야외 노동자 · 4 외국인 유학생 · 5 근로자.
 
 const CELL_M2 = 400;                           // 20 m 칸
@@ -9,7 +9,7 @@ const SHELTER_ORDER = [2, 0, 1, 4, 3, 5];       // 10/28 R2: P3 → P1 → P2 �
 const fin = (x, d = 0) => (Number.isFinite(x) ? x : d);
 const ri = (M, rain) => Math.max(0, Math.min(M.rain.length - 1, Math.round(fin(rain))));
 // 화면 경계값 정리: NaN · Infinity 가 계산 밖으로 새지 않게. mult < 0 → 0.
-const norm = (S) => ({ ...S, rain: fin(S.rain), cut: fin(S.cut), tau: fin(S.tau),
+const norm = (S) => ({ ...S, rain: fin(S.rain),
   mult: Object.fromEntries(['shelter', 'barrier', 'pump', 'volunteers'].map((k) => [k, Math.max(0, fin(S.mult?.[k]))])) });
 const binOf = (m) => Math.round(m * 100);
 const sum = (a, from = 0, to = a.length) => { let s = 0; for (let i = from; i < to; i++) s += a[i]; return s; };
@@ -37,12 +37,24 @@ export function pumpLevel(hist, lpm, mult, trigger) {
   return clip(hist, pumpCut(hist, lpm * mult * 60 / 1000, binOf(trigger)));
 }
 
-/** 양수기 적용 후 그 강우의 RES · COM 분포. 구마다 양수기 한 풀을 RES ∪ COM 칸이 같이 씀. */
+/** 양수기 수위 L(cm) at 강우 index r: 구마다 양수기 한 풀을 RES ∪ COM 칸이 같이 씀. 양수기 자료 없음 → null. */
+function pumpL(M, S, gi, r) {
+  const lpm = M.res.pump_lpm[gi];
+  if (lpm == null) return null;
+  const res = M.hist.res[gi][r], com = M.hist.com[gi][r];
+  return pumpCut(res.map((v, b) => v + com[b]), lpm * S.mult.pump * 60 / 1000, binOf(M.trigger_m));
+}
+
+/** 양수기 적용 후 그 강우의 RES · COM 분포. */
 function pumpedHists(M, S, gi, r) {
-  const res = M.hist.res[gi][r], com = M.hist.com[gi][r], lpm = M.res.pump_lpm[gi];
-  if (lpm == null) return { res, com };
-  const L = pumpCut(res.map((v, b) => v + com[b]), lpm * S.mult.pump * 60 / 1000, binOf(M.trigger_m));
-  return { res: clip(res, L), com: clip(com, L) };
+  const res = M.hist.res[gi][r], com = M.hist.com[gi][r], L = pumpL(M, S, gi, r);
+  return L == null ? { res, com } : { res: clip(res, L), com: clip(com, L) };
+}
+
+/** 지도용: S.rain 에서 양수기가 깎은 수위 L(cm). 양수기 자료 없음 · 0배 → null(지도 그대로). */
+export function pumpLevelCm(M, S, gi) {
+  S = norm(S);
+  return S.mult.pump > 0 ? pumpL(M, S, gi, ri(M, S.rain)) : null;
 }
 
 /**
@@ -77,6 +89,15 @@ function shownAt(M, S, gi, p, r) {
   if (!HIST[p] || (M.res.pump_lpm[gi] == null && (p !== 2 || M.res.barrier_n[gi] == null))) return base;
   const none = { ...S, mult: { ...S.mult, pump: 0, barrier: 0 } };
   return Math.min(100, Math.max(0, base + (lifeAt(M, S, gi, p, r) - lifeAt(M, none, gi, p, r))));
+}
+
+/** 지도용: 물막이판이 막은 몫(0~1) = 1 − P3 노출 %(물막이판 반영) ÷ 같은 상태에서 물막이판만 끈 노출 % — 오른쪽 표(shownAt)와 같은 비율.
+ *  물막이판 자료 없음 · 0배 · 노출 0 → null. */
+export function barrierShare(M, S, gi) {
+  S = norm(S);
+  if (!(S.mult.barrier > 0) || M.res.barrier_n[gi] == null) return null;
+  const r = ri(M, S.rain), off = shownAt(M, { ...S, mult: { ...S.mult, barrier: 0 } }, gi, 2, r);
+  return off > 0 ? 1 - shownAt(M, S, gi, 2, r) / off : null;
 }
 
 /** shownAt 의 공개판: S.rain 에서 시민 유형 p 의 인명 위해 노출 비율(%). */
@@ -116,14 +137,25 @@ export function minutesToDanger(onset, rain) {
   return Math.min(60, 60 * onset / rain);
 }
 
-/** 경보 {status: 'late' | 'now' | 'safe', toDanger, alertIn, onset}: alertIn = toDanger − tau.
- *  toDanger null(onset null 또는 rain < onset) → safe, alertIn ≤ 0 → late, 그 밖 → now. */
+/** 대피 시간(분) = 준비 + 구별 대피소 거리 ÷ 보행 속도(M.evac, prep/persona.py EVAC_*). */
+export function evacMin(M, gi, p) {
+  const e = M.evac;
+  return e.prep_min[p] + e.dist_m[gi][p] / e.speed_ms[p] / 60;
+}
+
+/** 판정 {status: 'late'(즉시 대피) | 'now'(대피 권고) | 'safe'(해당 없음), toDanger, evac, alertIn, onset}.
+ *  인명 피해까지(toDanger) = 이 비가 이어질 때 대피 인원의 절반이 인명 위해 수심에 닿기까지(문턱 % 없음:
+ *  지금 노출 % 의 절반에 처음 닿는 강우 → 60 × 그 강우 ÷ 지금 강우). 노출 0 → 해당 없음.
+ *  ('한 칸이라도 닿는 시점'은 모형이 76 mm/h 부터 물을 만들어 모든 유형 · 구가 같아짐 → 절반 시점을 씀)
+ *  toDanger ≤ 대피 시간 → 즉시 대피, 그보다 길면 대피 권고. alertIn = toDanger − 대피 시간(여유). */
 export function alert(M, S, gi, p) {
   S = norm(S);
-  const onset = onsetRain(M, gi, p, S.cut, S), toDanger = minutesToDanger(onset, S.rain);
-  if (toDanger == null) return { status: 'safe', toDanger: null, alertIn: null, onset };
-  const alertIn = toDanger - S.tau;
-  return { status: alertIn <= 0 ? 'late' : 'now', toDanger, alertIn, onset };
+  const now = shownAt(M, S, gi, p, ri(M, S.rain)), evac = evacMin(M, gi, p);
+  const onset = now > 0 ? onsetRain(M, gi, p, now / 2, S) : onsetRain(M, gi, p, 0, S);
+  const toDanger = now > 0 ? minutesToDanger(onset, S.rain) : null;
+  if (toDanger == null) return { status: 'safe', toDanger: null, evac, alertIn: null, onset };
+  const alertIn = toDanger - evac;
+  return { status: alertIn <= 0 ? 'late' : 'now', toDanger, evac, alertIn, onset };
 }
 
 /** 페르소나별 위험 인원(명) = counts × shownAt(양수기 · 물막이판 반영 노출 %) / 100. P3 은 가구라 × hh_size(2.2명, 포스터 make_scen_1028). */
@@ -141,7 +173,7 @@ function capacityWith(M, S, gi, D, toDangerP1) {
   for (const p of SHELTER_ORDER) {
     // 역량 = 그 차례에 남은 자리(D 로 자르지 않음 → ARSM > 1 = 여유). 자리는 실제로 데려간 만큼만 씀.
     let c = pool;
-    if (p === 0) c = vol == null ? null : Math.min(pool, vol * S.mult.volunteers * (toDangerP1 ?? 60) / Math.max(1, S.tau));
+    if (p === 0) c = vol == null ? null : Math.min(pool, vol * S.mult.volunteers * (toDangerP1 ?? 60) / Math.max(1, evacMin(M, gi, 0)));
     C[p] = c;
     const took = Math.min(pool, fin(D[p]), c ?? Infinity);
     pool -= took;
@@ -152,8 +184,8 @@ function capacityWith(M, S, gi, D, toDangerP1) {
 
 /**
  * 대응 역량: 대피소(shelter_cap × mult)를 P3 → P1 → P2 → P5 → P4 → P6 순서로 배정.
- * P1 은 의용소방대 · 자율방재단 지원 한도 volunteers × mult × toDanger(P1) / tau 로도 제한
- * (이 비에서 위험이 안 오면 toDanger = 60분, tau ≤ 0 → tau = 1). shelter_cap null → 전부 null.
+ * P1 은 의용소방대 · 자율방재단 지원 한도 volunteers × mult × toDanger(P1) / 대피 시간(P1) 으로도 제한
+ * (이 비에서 위험이 안 오면 toDanger = 60분). shelter_cap null → 전부 null.
  * volunteers null → P1 역량 null(지원 한도를 모름)이지만 P1 은 대피소 자리 min(남은 자리, D[P1])를 그대로 차지함.
  */
 export function capacity(M, S, gi, D) {
@@ -176,7 +208,7 @@ export function arsm(C, D) {
 /** 강우 0~174 전 구간 ARSM 곡선. */
 export function arsmCurve(M, S, gi, p) {
   S = norm(S);
-  const onsetP1 = onsetRain(M, gi, 0, S.cut, S);       // 강우와 무관 → 한 번만
+  const onsetP1 = onsetRain(M, gi, 0, 0, S);          // 강우와 무관 → 한 번만
   const value = M.rain.map((rain) => {
     const s = { ...S, rain }, D = demand(M, s, gi);
     return arsm(capacityWith(M, s, gi, D, minutesToDanger(onsetP1, rain))[p], D[p]);
@@ -191,11 +223,10 @@ export function sentence(M, S, gi, p) {
   const name = M.persona[p].name.replace(/\s*·\s*/g, ' · ');
   const a = alert(M, S, gi, p), rain = Math.round(fin(S.rain));
   const head = `${M.gn[gi]}의 ${name}${particle(name)} 시간당 ${rain} mm`;
-  if (rain <= 0) return `${M.gn[gi]}의 ${name}${particle(name)} 비가 오지 않아 위험 없음`;
+  if (rain <= 0) return `${M.gn[gi]}의 ${name}${particle(name)} 비가 오지 않아 해당 없음`;
   if (a.status === 'safe') return a.onset == null
-    ? `${head}, 이 강우 범위(0~${M.rain.at(-1)} mm/h)에서는 위험 없음`
-    : `${head}, 이 강우에서는 위험 수심에 도달하지 않음 (위험 시작 약 ${Math.round(a.onset)} mm/h)`;
-  const t = `${head}가 내리면 약 ${Math.max(1, Math.round(a.toDanger))}분 뒤 위험 → `;
-  if (a.status === 'late') return t + '이미 대피 시점이 지남';
-  return t + (a.alertIn < 1 ? '지금 바로 대피 경보 필요' : `${Math.round(a.alertIn)}분 안에 대피 경보 필요`);
+    ? `${head}, 이 강우 범위(0~${M.rain.at(-1)} mm/h)에서는 인명 피해 수심에 닿지 않음`
+    : `${head}, 이 강우에서는 인명 피해 수심에 닿지 않음 (약 ${Math.round(a.onset)} mm/h부터 닿음)`;
+  const t = `${head}가 이어지면 약 ${Math.max(1, Math.round(a.toDanger))}분 뒤 인명 피해 수심, 대피에 약 ${Math.round(a.evac)}분 → `;
+  return t + (a.status === 'late' ? '즉시 대피' : `대피 권고 (여유 ${Math.round(a.alertIn)}분)`);
 }

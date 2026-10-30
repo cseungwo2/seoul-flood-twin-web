@@ -27,7 +27,7 @@ body {
 b { font-weight: 700; }
 
 /* ---------- 위 지표 줄 ---------- */
-.top { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 10px 16px; }
+.top { display: flex; align-items: stretch; justify-content: space-between; gap: 24px; padding: 10px 16px; }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .mark { width: 28px; height: 28px; flex: none; }
 h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: var(--crimson); text-wrap: balance; }
@@ -35,10 +35,10 @@ h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spac
 .kpi { display: flex; flex: 1; margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
 .kpi > div { flex: 1; padding: 8px 20px; min-width: 132px; }
 .kpi > div + div { border-left: 1px solid var(--line); }
-.kpi dt { font-size: 15px; color: var(--ink-2); }
-.kpi dd { margin: 0; display: flex; align-items: baseline; gap: 4px; }
-.kpi dd b { font-size: 34px; line-height: 1.15; letter-spacing: -0.01em; }
-.kpi dd span { font-size: 14px; color: var(--ink-2); }
+.kpi dt { text-align: center; font-size: 16px; color: var(--ink-2); }
+.kpi dd { margin: 0; display: flex; justify-content: center; align-items: baseline; gap: 4px; }
+.kpi dd b { font-size: 40px; line-height: 1.15; letter-spacing: -0.01em; }
+.kpi dd span { font-size: 16px; color: var(--ink-2); }
 #k-late { color: var(--crimson); }
 #k-saved { color: #2E7D4F; }
 .toast { position: fixed; left: 50%; top: 84px; z-index: 50; transform: translate(-50%, -8px); max-width: min(560px, calc(100% - 32px)); padding: 10px 16px; font-size: 15px; font-weight: 600; color: #fff; background: rgba(38, 38, 38, 0.92); border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity 250ms ease-out, transform 250ms ease-out; }
@@ -51,12 +51,11 @@ h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spac
 .res-item.off .row, .res-item.off input[type="range"] { opacity: 0.4; }
 
 /* 실시간 서울 날씨(Open-Meteo): 시각 · 기온 · 지난 1시간 강수 + 슬라이더에 적용 */
-.wx { flex: none; display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 14px; padding: 8px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
-.wx[hidden] { display: none; }
-.wx p { margin: 0; }
-.wx-t { grid-column: 1; font-size: 14px; color: var(--ink-2); }
-.wx-v { grid-column: 1; font-size: 16px; }
-.wx button { grid-column: 2; grid-row: 1 / 3; padding: 8px 12px; font: 700 14px/1 var(--font); color: #fff; background: var(--ink); border: 0; border-radius: 4px; cursor: pointer; }
+.kpi.wx { flex: none; }
+.kpi.wx > div { flex: none; min-width: 0; padding: 8px 18px; }
+.kpi.wx[hidden] { display: none; }
+.wx-act { display: flex; align-items: center; }
+.wx button { padding: 10px 14px; font: 700 15px/1 var(--font); color: #fff; background: var(--ink); border: 0; border-radius: 4px; cursor: pointer; white-space: nowrap; }
 
 /* ---------- 세 칸 ---------- */
 .grid { --lw: 296px; --rw: 420px; display: grid; grid-template-columns: var(--lw) 10px minmax(0, 1fr) 10px var(--rw); padding: 0 16px 12px; min-height: 0; }
@@ -116,19 +115,10 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .lg { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .lg[hidden] { display: none; }
 .sw { width: 14px; height: 10px; display: inline-block; border: 1px solid var(--line-2); }
-.sw.c0 { background: rgba(141, 0, 34, 0.70); border-color: var(--crimson); }
-.sw.c1 { background: rgba(141, 0, 34, 0.55); border-color: var(--crimson); }
-.sw.c2 { background: rgba(141, 0, 34, 0.40); border-color: var(--crimson); }
-.sw.c3 { background: rgba(141, 0, 34, 0.25); border-color: var(--crimson); }
-.sw.c4 { background: rgba(141, 0, 34, 0.12); border-color: var(--crimson); }
-.sw.safe { background: transparent; }
-.sw.hatch { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M0 4L4 0' stroke='%23262626' stroke-opacity='.45' stroke-width='.8'/%3E%3C/svg%3E"); } /* 지도 빗금과 같은 무늬 */
-.sw.rec { background: rgba(46, 125, 79, 0.6); border-color: #2E7D4F; }
 .sw.w1 { background: var(--w1); border-color: var(--w1); }
 .sw.w2 { background: var(--w2); border-color: var(--w2); }
 .sw.w3 { background: var(--w3); border-color: var(--w3); }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); border: 1.5px solid #fff; box-shadow: 0 0 0 1px var(--ink); display: inline-block; margin: 0 2px; }
-.maphint { position: absolute; top: 10px; left: 10px; margin: 0; padding: 4px 8px; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; color: var(--ink-2); transition: opacity 300ms ease-out; }
 .mapback { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 6px 10px; font: 700 14px/1 var(--font); color: var(--crimson); background: var(--panel); border: 1px solid var(--crimson); border-radius: 4px; cursor: pointer; }
 .mapback[hidden], .routebtn[hidden], .routecard[hidden] { display: none; }
 .routebtn { position: absolute; top: 10px; right: 52px; z-index: 2; padding: 7px 12px; font: 700 15px/1 var(--font); color: #fff; background: #2E7D4F; border: 0; border-radius: 4px; cursor: pointer; }
@@ -161,7 +151,6 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .routecard .tag.na { color: var(--ink-2); background: #F0EDE8; }
 .routecard .ok { color: #2E7D4F; font-weight: 700; }
 .routecard .no { color: var(--crimson); font-weight: 700; }
-.maphint.off { opacity: 0; pointer-events: none; }
 .maplibregl-popup-content { font: 500 14px/1.45 var(--font); color: var(--ink); border-radius: 4px; padding: 8px 10px; box-shadow: 0 2px 8px rgba(38, 38, 38, 0.14); }
 .chip { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
 
@@ -172,15 +161,41 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235E5A54' stroke-width='1.6'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 2px center;
 }
-.gucount { margin: 0; font-size: 14px; color: var(--ink-2); }
+.guhead select { border-bottom: 2px solid transparent; transition: border-color 150ms ease-out; }
+.guhead select:hover, .guhead select:focus-visible { border-bottom-color: var(--crimson); outline: none; }
+/* 열었을 때 25개 구를 3칸 격자로(가나다순). 지원 브라우저(Chrome 135+)만, 나머지는 기본 목록 */
+@supports (appearance: base-select) {
+  .guhead select, .guhead select::picker(select) { appearance: base-select; }
+  .guhead select { display: flex; align-items: center; gap: 10px; padding: 0 2px 2px 0; background-image: none; }
+  .guhead select::picker-icon { content: ""; width: 12px; height: 8px; transition: rotate 150ms ease-out;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235E5A54' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat center; }
+  .guhead select:open::picker-icon { rotate: 180deg; }
+  .guhead select::picker(select) { margin-top: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 20px rgba(38, 38, 38, 0.12); }
+  .guhead select:open::picker(select) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; } /* 닫혔을 때 display 를 덮어쓰면 늘 열려 보임 */
+  .guhead option { padding: 8px 10px; border-radius: 4px; font: 500 15px/1.2 var(--font); color: var(--ink); white-space: nowrap; cursor: pointer; }
+  .guhead option::checkmark { display: none; }
+  .guhead option:hover, .guhead option:focus-visible { background: var(--crimson-pale); outline: none; }
+  .guhead option:checked { background: var(--crimson); color: #fff; font-weight: 700; }
+  .guhead option:disabled { display: none; } /* '자치구 선택' 안내 줄은 목록에서 숨김 */
+}
+.gucount { margin: 0; display: flex; gap: 6px; }
+.gucount .gc { display: flex; align-items: baseline; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+.gucount em { font-style: normal; font-size: 13px; color: var(--ink-2); }
+.gucount b { font-size: 17px; }
+.gucount .late { border-color: var(--crimson); } .gucount .late b { color: var(--crimson); }
+.gucount .safe b { color: var(--ink-2); font-weight: 500; }
 .lines { list-style: none; margin: 0; padding: 0; }
-.lines li { display: grid; grid-template-columns: 24px minmax(0, 1.4fr) 108px 48px 1.2fr; align-items: center; gap: 8px; padding: 7px 0; font-size: 15px; cursor: default; }
+.lines li { display: grid; grid-template-columns: 24px minmax(0, 1.3fr) 66px 84px 1fr; align-items: center; gap: 8px; padding: 8px 8px; font-size: 15px; cursor: default; }
 .lines li + li { border-top: 1px solid var(--line); }
 .lines li[data-p] { cursor: pointer; }
 .lines li[data-p]:hover { background: #F7F4EE; }
 .lines li.on { background: #EFEAE1; box-shadow: inset 3px 0 0 #262626; }
 .lgh { margin: 2px 0 6px; font-size: 13px; color: var(--ink-2); white-space: normal; }
-.lines li.lh { padding: 0 0 4px; font-size: 13px; color: var(--ink-2); }
+/* 머리줄: 옅은 띠 + 열마다 아래 값과 같은 정렬(지도 · 인명 피해까지 = 가운데, 대피 인원 = 오른쪽) */
+.lines li.lh { padding: 7px 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); background: #F5F2EC; border-radius: 4px; white-space: nowrap; }
+.lines li.lh + li { border-top: 0; }
+.lines li.lh span:nth-child(1), .lines li.lh span:nth-child(4), .lines .when { text-align: center; }
+.lines li.lh span:nth-child(5) { text-align: right; }
 .lines .chip { width: 12px; height: 12px; margin: 0 auto; border-radius: 3px; }
 .lines .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lines .st { font-weight: 700; font-size: 14px; white-space: nowrap; }
@@ -247,7 +262,6 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .legend { font-size: 13px; padding: 4px 8px; max-width: calc(100% - 20px); }
   .legend > summary { display: block; cursor: pointer; font-weight: 700; min-height: 24px; line-height: 24px; }
   .legend[open] > summary { margin-bottom: 4px; }
-  .maphint { display: none; }
   .quick button { min-height: 44px; }
   input[type="range"] { height: 32px; }
 }
