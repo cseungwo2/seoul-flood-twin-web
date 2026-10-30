@@ -1,5 +1,5 @@
 // 패널: 왼쪽 슬라이더 · 위 지표 줄 · 오른쪽 선택 구(경보 문장 + 위험 인원 막대 · ARSM 곡선).
-import { sentence, demand, arsmCurve, lifeShown } from './model.js';
+import { sentence, demand, arsmCurve, lifeShown, volunteerPlan } from './model.js';
 
 export const RES = [
   { k: 'shelter', f: 'shelter_cap', name: '대피시설 수용 인원', short: '대피시설', unit: '명' },
@@ -91,7 +91,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       <input type="checkbox" role="switch" class="tog" id="t-${r.k}" aria-label="${r.name} 켜기"></summary>
       <label class="row" for="s-${r.k}"><span>현 보유량 대비</span><output id="o-${r.k}">100 %</output></label>
       <input id="s-${r.k}" type="range" min="0" max="300" step="10" value="100" disabled>
-      <p class="res-na" id="na-${r.k}" hidden></p></details>`;
+      <p class="res-na" id="na-${r.k}" hidden></p>${r.k === 'volunteers' ? '<dl class="vol" id="vol-plan" hidden></dl>' : ''}</details>`;
   }).join('');
   if (narrow) document.querySelectorAll('.sec-judge, .sec-res').forEach((d) => { d.open = false; });
   for (const r of RES) {
@@ -168,12 +168,17 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       $('gu-pick').hidden = !none;
       document.querySelectorAll('.panel.right > details').forEach((d) => { d.hidden = none; });
       if (!none) return;
-      guSel.value = ''; $('gu-count').textContent = '';
+      guSel.value = ''; $('gu-count').textContent = ''; $('vol-plan').hidden = true;
       RES.forEach((r) => { $(`na-${r.k}`).hidden = true; });
     },
     gu(gi, alerts) {
       guSel.value = gi; resNA(gi);
       const r = Math.round(S.rain), D = demand(M, S, gi), dMax = Math.max(1, ...D), L = lifeShown(M, S, gi);
+      // 의용소방대 칸: 고른 구의 재해취약자 기준 투입 시한 · 지원 가능 인원
+      const v = volunteerPlan(M, S, gi), vp = $('vol-plan');
+      vp.hidden = !v;
+      if (v) vp.innerHTML = `<div><dt>투입 시한</dt><dd>${v.deadline == null ? '해당 없음' : v.deadline <= 0 ? '<b class="late">즉시</b>' : `<b>${Math.round(v.deadline)}</b>분 안`}</dd></div>`
+        + `<div><dt>지원 가능</dt><dd>${S.mult.volunteers ? `<b>${fmt(v.help)}</b>명` : '켜면 계산'} <span>/ 재해취약자 ${fmt(v.need)}명</span></dd></div>`;
       const order = [0, 1, 2, 3, 4, 5].sort((a, b) => RANK[alerts[b].status] - RANK[alerts[a].status] || a - b);
       // 한 줄 = 한 유형: 판정 · 인명 피해까지 남은 시간 · 대피 인원(막대, 해당 없음이면 회색). 긴 설명은 마우스를 올리면(title)
       const head = '<li class="lh" aria-hidden="true"><span>레이어</span><span>시민 유형</span><span>판정</span><span title="인명 피해 우려 수심에 닿기까지 남은 시간">인명 피해까지</span><span>대피 인원</span></li>';

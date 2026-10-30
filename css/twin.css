@@ -232,6 +232,14 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .lines .track i { display: block; height: 100%; min-width: 2px; border-radius: 2px; transition: width 120ms ease-out; }
 .pick { margin: 24px 0; text-align: center; font-size: 15px; line-height: 1.6; color: var(--ink-2); }
 .pick[hidden], .panel.right > details[hidden] { display: none; }
+/* 의용소방대 칸 아래: 투입 시한 · 지원 가능(고른 구) */
+.vol { margin: 10px 0 0; padding: 8px 10px; display: grid; gap: 4px; background: #F7F4EE; border-radius: 4px; }
+.vol[hidden] { display: none; }
+.vol > div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.vol dt { font-size: 14px; color: var(--ink-2); }
+.vol dd { margin: 0; font-size: 15px; text-align: right; }
+.vol dd b { font-size: 18px; } .vol dd b.late { color: var(--crimson); }
+.vol dd span { font-size: 13px; color: var(--ink-2); }
 .res-na { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); }
 .res-na[hidden] { display: none; }
 /* 안전 마진 범례: 3칸 × 2줄, 누르면 그 선 끄기/켜기 */

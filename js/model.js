@@ -188,6 +188,18 @@ function capacityWith(M, S, gi, D, toDangerP1) {
  * (이 비에서 위험이 안 오면 toDanger = 60분). shelter_cap null → 전부 null.
  * volunteers null → P1 역량 null(지원 한도를 모름)이지만 P1 은 대피소 자리 min(남은 자리, D[P1])를 그대로 차지함.
  */
+/** 의용소방대 · 자율방재단(재해취약자 P1 대피 지원): 투입 시한(분) = P1 인명 피해까지 − P1 대피 시간(alertIn),
+ *  지원 가능 인원 = 대원 × mult × 인명 피해까지 ÷ 대피 시간(capacity 의 P1 지원 한도와 같은 식), 필요 = P1 대피 인원.
+ *  대원 자료 없음 → null, 이 비에서 P1 위험 없음 → deadline null. */
+export function volunteerPlan(M, S, gi) {
+  S = norm(S);
+  const vol = M.res.volunteers[gi];
+  if (vol == null) return null;
+  const a = alert(M, S, gi, 0), need = demand(M, S, gi)[0];
+  if (a.toDanger == null) return { deadline: null, help: 0, need };
+  return { deadline: a.alertIn, help: vol * S.mult.volunteers * a.toDanger / Math.max(1, a.evac), need };
+}
+
 export function capacity(M, S, gi, D) {
   S = norm(S);
   return capacityWith(M, S, gi, D, alert(M, S, gi, 0).toDanger);
