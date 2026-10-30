@@ -32,11 +32,12 @@ b { font-weight: 700; }
 .mark { width: 28px; height: 28px; flex: none; }
 h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: var(--crimson); text-wrap: balance; }
 .sub { margin: 2px 0 0; font-size: 14px; color: var(--ink-2); }
-.kpi { display: flex; flex: 1; margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
-.kpi > div { flex: 1; padding: 8px 20px; min-width: 132px; }
+.kpi { display: flex; flex: 1; margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.kpi > div { flex: 1; padding: 0 0 8px; min-width: 132px; }
 .kpi > div + div { border-left: 1px solid var(--line); }
-.kpi dt { text-align: center; font-size: 16px; color: var(--ink-2); }
-.kpi dd { margin: 0; display: flex; justify-content: center; align-items: baseline; gap: 4px; }
+/* 칸 제목 = 위쪽 띠(경보 표 머리줄과 같은 옅은 띠) */
+.kpi dt { padding: 6px 14px; text-align: center; font-size: 17px; font-weight: 700; color: var(--ink); background: #F5F2EC; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.kpi dd { margin: 6px 0 0; padding: 0 14px; display: flex; justify-content: center; align-items: baseline; gap: 4px; }
 .kpi dd b { font-size: 40px; line-height: 1.15; letter-spacing: -0.01em; }
 .kpi dd span { font-size: 16px; color: var(--ink-2); }
 #k-late { color: var(--crimson); }
@@ -52,9 +53,9 @@ h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spac
 
 /* 실시간 서울 날씨(Open-Meteo): 시각 · 기온 · 지난 1시간 강수 + 슬라이더에 적용 */
 .kpi.wx { flex: none; }
-.kpi.wx > div { flex: none; min-width: 0; padding: 8px 18px; }
+.kpi.wx > div { flex: none; min-width: 0; }
 .kpi.wx[hidden] { display: none; }
-.wx-act { display: flex; align-items: center; }
+.wx-act { display: flex; align-items: center; padding: 0 14px !important; }
 .wx button { padding: 10px 14px; font: 700 15px/1 var(--font); color: #fff; background: var(--ink); border: 0; border-radius: 4px; cursor: pointer; white-space: nowrap; }
 
 /* ---------- 세 칸 ---------- */
