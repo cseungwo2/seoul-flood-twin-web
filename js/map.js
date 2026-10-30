@@ -320,15 +320,15 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   [[6, 3, 3, 0.85], [16, 12, 11, 0.45], [30, 24, 26, 0.22]].forEach(([w, bl, off, op], i) => {
     const id = `gu-glow${i}`; GLOW[id] = op;
     map.addLayer({ id, type: 'line', source: 'gu', filter: ['==', ['get', 'gi'], -1], layout: { 'line-join': 'round' },
-      paint: { 'line-color': '#8D0022', 'line-width': w, 'line-blur': bl, 'line-offset': off, 'line-opacity': 0, 'line-opacity-transition': { duration: 900 } } }, 'seoul-mask');
+      paint: { 'line-color': '#8D0022', 'line-width': w, 'line-blur': bl, 'line-offset': off, 'line-opacity': 0, 'line-opacity-transition': { duration: 300 } } }, 'seoul-mask');
   });
   const home = { ...camera, bounds: undefined };
   const back = document.getElementById('mapback');
   const lift = (gi) => {
-    for (const id of Object.keys(GLOW)) { map.setFilter(id, ['==', ['get', 'gi'], gi]); map.setPaintProperty(id, 'line-opacity', 0); }
+    // 누르는 즉시 번짐을 새 구로 옮김(끄고 이동 뒤 다시 켜면 깜빡여 보임)
+    for (const [id, op] of Object.entries(GLOW)) { map.setFilter(id, ['==', ['get', 'gi'], gi]); map.setPaintProperty(id, 'line-opacity', op); }
     const b = guBox.find((g) => g.gi === gi).b;
     map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 70, pitch: narrow ? 0 : 52, bearing: map.getBearing(), duration: 1200 });
-    map.once('moveend', () => { for (const [id, op] of Object.entries(GLOW)) map.setPaintProperty(id, 'line-opacity', op); });
     back.hidden = false;
   };
   const unlift = () => {
