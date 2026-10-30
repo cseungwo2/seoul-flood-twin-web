@@ -237,7 +237,7 @@ export function sentence(M, S, gi, p) {
   const head = `${M.gn[gi]}의 ${name}${particle(name)} 시간당 ${rain} mm`;
   if (rain <= 0) return `${M.gn[gi]}의 ${name}${particle(name)} 비가 오지 않아 해당 없음`;
   if (a.status === 'safe') return a.onset == null
-    ? `${head}, 이 강우 범위(0~${M.rain.at(-1)} mm/h)에서는 인명 피해 수심에 닿지 않음`
+    ? `${head}, 이 강우 범위(0 ~ ${M.rain.at(-1)} mm/h)에서는 인명 피해 수심에 닿지 않음`
     : `${head}, 이 강우에서는 인명 피해 수심에 닿지 않음 (약 ${Math.round(a.onset)} mm/h부터 닿음)`;
   const t = `${head}가 이어지면 약 ${Math.max(1, Math.round(a.toDanger))}분 뒤 인명 피해 수심, 대피에 약 ${Math.round(a.evac)}분 → `;
   return t + (a.status === 'late' ? '즉시 대피' : `대피 권고 (여유 ${Math.round(a.alertIn)}분)`);

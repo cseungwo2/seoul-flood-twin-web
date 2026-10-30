@@ -69,7 +69,9 @@ function render() {
   }
   let people = 0, saved = 0;
   REC = M.gn.map((_, gi) => recovered(M, S, gi));
-  for (let gi = 0; gi < M.gn.length; gi++) { for (const d of demand(M, S, gi)) people += d; saved += REC[gi].saved; }
+  const DG = M.gn.map((_, gi) => demand(M, S, gi));   // 구 × 유형 대피 인원(상황 알림에도 씀)
+  for (let gi = 0; gi < M.gn.length; gi++) { for (const d of DG[gi]) people += d; saved += REC[gi].saved; }
+  panels.situation(A, DG, sel);
   panels.kpi({ rain: S.rain, alertN: status.filter((s) => s !== 'safe').length, lateN: status.filter((s) => s === 'late').length, people, saved });
   showSel(); // 6곡선 계산 ≈ 1 ms → 늦추지 않고 매번 다시 그림
 }
@@ -88,6 +90,7 @@ function select(gi) {
   sel = gi;
   twin?.setSelected(gi, gi != null);
   showSel();
+  schedule(); // 상황 알림의 펼친 구도 같이 바뀌게
 }
 render();
 try {

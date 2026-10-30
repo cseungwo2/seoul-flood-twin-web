@@ -9,6 +9,9 @@ export const RES = [
 ];
 export const STATUS_WORD = { late: '즉시 대피', now: '대피 권고', safe: '해당 없음' };
 export const RANK = { late: 2, now: 1, safe: 0 };
+// 상황 알림: 시민 유형별 필요한 대응(10/31 초안, 승우 확인 전 — 문구만 바꾸면 됨)
+const ACTION = ['의용소방대 · 자율방재단 대피 지원', '학교 · 보호자 연락, 대피시설 안내', '물막이판 설치, 반지하 대피 지원',
+  '작업 중지, 도로 통제', '외국어 재난 안내, 대피시설 위치 안내', '지하 공간 · 출퇴근길 통제, 귀가 안내'];
 const Y_TICKS = [0.1, 0.5, 1, 2, 5, 10, 100];
 const Y_LO = 0.1, Y_HI = 100; // 이 밖의 값은 축 끝에 붙임(0 = 바닥, 100 이상 = 천장)
 // 트윈 전용 시민 유형 색(포스터와 다름): 한 그래프에 6선이 겹쳐도 구분되게 색각 검사(dataviz validator) 통과한 조합
@@ -119,6 +122,11 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
     }
   }
 
+  // 상황 알림 줄 누르기 = 그 구 고르기(지도 이동 + 펼쳐서 필요한 대응)
+  const sitPick = (li) => { if (li?.dataset.gi != null) onSelect(+li.dataset.gi); };
+  $('sit-list').addEventListener('click', (e) => sitPick(e.target.closest('li[data-gi]')));
+  $('sit-list').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sitPick(e.target.closest('li[data-gi]')); } });
+
   // 구 고르기
   const guSel = $('s-gu');
   guSel.innerHTML = '<option value="" disabled>자치구 선택</option>' + M.gn.map((n, gi) => [n, gi]).sort(([a], [b]) => a.localeCompare(b, 'ko'))
@@ -164,6 +172,19 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
     },
     /** 선택 구 문장 · 위험 인원(막대, 구 안 최대 = 꽉 참) · 자원 보유량. alerts = 그 구의 alert() 6개. */
     /** 고른 구 없음(처음 · 서울 밖 클릭) = 안내 한 줄만, 있음 = 경보 · 안전 마진. */
+    /** 상황 알림: 위험한 구를 급한 순(즉시 대피 수 → 가장 짧은 여유)으로 6개, 고른 구는 맨 위에 펼쳐서 유형별 필요한 대응. */
+    situation(A, DG, sel) {
+      const rows = M.gn.map((gn, gi) => {
+        const ps = A[gi].map((a, p) => ({ p, a })).filter(({ a }) => a.status !== 'safe').sort((x, y) => RANK[y.a.status] - RANK[x.a.status] || x.a.alertIn - y.a.alertIn);
+        return { gi, gn, ps, late: ps.filter(({ a }) => a.status === 'late').length, min: ps.length ? ps[0].a.alertIn : Infinity, n: ps.reduce((t, { p }) => t + DG[gi][p], 0) };
+      }).filter((r) => r.ps.length).sort((x, y) => y.late - x.late || x.min - y.min);
+      const top = rows.slice(0, 6), s = rows.find((r) => r.gi === sel);
+      if (s && !top.includes(s)) top.unshift(s);
+      $('sit-list').innerHTML = top.length ? top.map((r) => `<li class="${r.gi === sel ? 'open' : ''}" data-gi="${r.gi}" role="button" tabindex="0">
+        <div class="sh"><b>${r.gn}</b><span class="sb">${r.late ? `<em class="late">즉시 대피 ${r.late}</em>` : ''}${r.ps.length - r.late ? `<em>대피 권고 ${r.ps.length - r.late}</em>` : ''}</span><span class="sn">${fmt(r.n)}명</span></div>
+        ${r.gi === sel ? `<ul class="sa">${r.ps.map(({ p, a }) => `<li><i class="chip" style="background:${persona[p].color}"></i><span class="sp">${persona[p].name}</span><span class="ss ${a.status}">${STATUS_WORD[a.status]}</span><span class="sx">${ACTION[p]}</span></li>`).join('')}</ul>` : ''}</li>`).join('')
+        : '<li class="none">지금 강우에서 대피가 필요한 자치구 없음</li>';
+    },
     pick(none) {
       $('gu-pick').hidden = !none;
       document.querySelectorAll('.panel.right > details').forEach((d) => { d.hidden = none; });
