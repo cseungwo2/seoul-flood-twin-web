@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>서울 침수 안전 마진 디지털 트윈</title>
+<meta name="description" content="강우 0~174 mm/h에서 서울 25개 자치구 시민 유형 6개의 대피 경보 시점과 비구조적 안전 마진(ARSM)을 보여 주는 디지털 트윈">
+<meta name="theme-color" content="#F2EEE7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5c-3.6 4.6-6 8-6 11a6 6 0 0 0 12 0c0-3-2.4-6.4-6-11Z' fill='%238D0022'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="css/twin.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="top">
+  <h1 class="sr">서울 침수 안전 마진 디지털 트윈</h1>
+  <dl class="kpi" aria-live="polite">
+    <div><dt>대피 경보 필요 자치구</dt><dd><b id="k-alert">0</b><span>개 구</span></dd></div>
+    <div><dt>대피 시간 부족 자치구</dt><dd><b id="k-late">0</b><span>개 구</span></dd></div>
+    <div><dt>위험 인원</dt><dd><b id="k-people">0</b><span>명</span></dd></div>
+    <div><dt>대응 자원 회복 인원</dt><dd><b id="k-saved">0</b><span>명</span></dd></div>
+  </dl>
+</header>
+
+<main class="grid">
+  <aside class="panel left" aria-label="조건">
+    <details class="sec sec-rain" open>
+      <summary>강우</summary>
+      <div class="rain-read"><output id="o-rain" for="s-rain">100</output><span>mm/h</span></div>
+      <input id="s-rain" type="range" min="0" max="174" step="1" value="100" aria-label="시간당 강우(mm/h)">
+      <div class="scale"><span>0</span><span>174</span></div>
+      <div class="quick">
+        <button type="button" data-rain="100"><b>100</b> mm/h</button>
+        <button type="button" data-rain="174"><b>174</b> mm/h</button>
+      </div>
+    </details>
+    <details class="sec sec-judge" open>
+      <summary>대피 판단</summary>
+      <label class="row" for="s-cut"><span id="cut-name">자치구 침수 범위</span><output id="o-cut">생활 공간의 5 %</output></label>
+      <input id="s-cut" type="range" min="1" max="20" step="1" value="5">
+      <p class="hint">집·일터 같은 생활 공간 중 이만큼이 사람이 다칠 수 있는 깊이로 잠기면 '위험'으로 봅니다</p>
+      <label class="row" for="s-tau"><span>경보 후 대피를 마치는 데 걸리는 시간</span><output id="o-tau">10분</output></label>
+      <input id="s-tau" type="range" min="5" max="30" step="1" value="10">
+      <p class="hint">위험해지기 이만큼 전에는 경보가 나가야 대피를 마칠 수 있습니다. 늘리면 경보를 더 일찍 내려야 합니다</p>
+    </details>
+    <div id="res"></div>
+  </aside>
+  <div class="gutter" data-side="left" role="separator" aria-orientation="vertical" aria-label="왼쪽 패널 폭" tabindex="0"><button type="button" class="fold" aria-label="왼쪽 패널 접기">‹</button></div>
+
+  <section class="mapwrap" aria-label="서울 지도">
+    <div id="map"></div>
+    <canvas class="rain" id="rain" aria-hidden="true"></canvas>
+    <button type="button" class="mapback" id="mapback" hidden>← 서울 전체</button>
+    <button type="button" class="routebtn" id="route-btn" aria-pressed="false" hidden>대피 경로</button>
+    <div class="routecard" id="route-card" hidden aria-live="polite"></div>
+    <p class="mapfail" id="mapfail" hidden>지도를 불러오지 못했습니다 — 계산 결과는 그대로 볼 수 있습니다</p>
+    <details class="legend" id="legend">
+      <summary>범례</summary>
+      <p class="lgt">대피 경보까지 남은 시간</p>
+      <div class="lgrid">
+        <div class="lg"><i class="sw c0"></i>대피 시간 부족</div>
+        <div class="lg"><i class="sw c1"></i>15분 이내</div>
+        <div class="lg"><i class="sw c2"></i>15~25분</div>
+        <div class="lg"><i class="sw c3"></i>25~35분</div>
+        <div class="lg"><i class="sw c4"></i>35분 초과</div>
+        <div class="lg"><i class="sw safe"></i>위험 없음</div>
+      </div>
+      <div class="lg full"><i class="sw hatch"></i><span id="lg-hatch">대피시설 정보 없음(회신 없음)</span></div>
+      <div class="lg full"><i class="sw rec"></i>회복 구역 (켠 대응 자원으로 줄어든 위험, 진할수록 많이)</div>
+      <p class="lgt">침수 수심</p>
+      <div class="lgrid">
+        <div class="lg"><i class="sw w1"></i>0.15~0.3 m</div>
+        <div class="lg"><i class="sw w2"></i>0.3~0.5 m</div>
+        <div class="lg"><i class="sw w3"></i>0.5 m 이상</div>
+        <div class="lg" id="lg-shelter"><i class="dot"></i>대피시설</div>
+      </div>
+    </details>
+    <p class="maphint" id="maphint">구를 누르면 오른쪽에 시민 유형별 경보가 나옵니다</p>
+  </section>
+  <div class="gutter" data-side="right" role="separator" aria-orientation="vertical" aria-label="오른쪽 패널 폭" tabindex="0"><button type="button" class="fold" aria-label="오른쪽 패널 접기">›</button></div>
+
+  <aside class="panel right" aria-label="선택 구">
+    <div class="guhead">
+      <label for="s-gu" class="sr">자치구 선택</label>
+      <select id="s-gu"></select>
+      <p id="gu-count" class="gucount"></p>
+    </div>
+    <details class="sec sec-say" open>
+      <summary>시민 유형별 대피 경보</summary>
+      <ol id="lines" class="lines"></ol>
+    </details>
+    <details class="sec sec-arsm" open>
+      <summary>안전 마진</summary>
+      <ul class="alg" id="arsm-lg"></ul>
+      <div class="chartbox" id="arsm-box"><canvas id="c-arsm" aria-label="강우에 따른 시민 유형별 ARSM 곡선"></canvas></div>
+      <p class="na" id="arsm-na" hidden>정보 없음</p>
+    </details>
+  </aside>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
