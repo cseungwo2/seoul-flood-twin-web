@@ -139,6 +139,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .mapwrap { position: relative; min-height: 0; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); background: #ECE8E0; }
 #map { position: absolute; inset: 0; opacity: 0; transition: opacity 300ms ease-out; } /* 우리 층이 다 얹힌 뒤 보임(바탕 지도만 잠깐 뜨는 것 방지) */
 #map.ready { opacity: 1; }
+.mapwrap:has(#map:not(.ready))::after { content: "지도를 불러오는 중"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; color: var(--ink-2); pointer-events: none; }
 .legend {
   position: absolute; left: 10px; bottom: 10px; width: 290px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
   padding: 10px 14px; font-size: 14px; box-shadow: 0 2px 8px rgba(38, 38, 38, 0.08);
