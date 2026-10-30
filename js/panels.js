@@ -216,10 +216,10 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       // 의용소방대 칸: 고른 구의 재해취약자 기준 투입 시한 · 지원 가능 인원
       const v = volunteerPlan(M, S, gi), vp = $('vol-plan');
       vp.hidden = !v;
-      // 출동 마감 = 이 시간 안에 출동해야 재해취약자가 인명 피해 수심 전에 대피를 마침(인명 피해까지 − 기본 대피 시간)
-      if (v) vp.innerHTML = `<div title="이 시간 안에 출동해야 재해취약자가 위험해지기 전에 대피를 마칠 수 있습니다"><dt>출동 마감</dt><dd>${v.deadline == null ? '해당 없음' : v.deadline <= 0 ? '<b class="late">지금 즉시</b>' : `<b>${Math.round(v.deadline)}</b>분 이내`}</dd></div>`
-        + (S.mult.volunteers ? `<div><dt>지원 가능</dt><dd><b>${fmt(v.help)}</b>명 <span>/ 필요 ${fmt(v.need)}명</span></dd></div>`
-          : `<div><dt>도와야 할 재해취약자</dt><dd><b>${fmt(v.need)}</b>명</dd></div>`);
+      // 골든타임 = 이 시간 안에 출동해야 재해취약자가 인명 피해 수심 전에 대피를 마침(인명 피해까지 − 기본 대피 시간)
+      if (v) vp.innerHTML = `<div title="이 시간 안에 출동해야 재해취약자가 위험해지기 전에 대피를 마칠 수 있습니다"><dt>골든타임</dt><dd>${v.deadline == null ? '해당 없음' : v.deadline <= 0 ? '<b class="late">지남</b>' : `<b>${Math.round(v.deadline)}</b>분`}</dd></div>`
+        + (S.mult.volunteers ? `<div><dt>지원 가능</dt><dd><b>${fmt(v.help)}</b>명 <span>/ 대상 ${fmt(v.need)}명</span></dd></div>`
+          : `<div><dt>지원 대상</dt><dd><b>${fmt(v.need)}</b>명</dd></div>`);
       const order = [0, 1, 2, 3, 4, 5].sort((a, b) => RANK[alerts[b].status] - RANK[alerts[a].status] || a - b);
       // 한 줄 = 한 유형: 판정 · 인명 피해까지 남은 시간 · 대피 인원(막대, 해당 없음이면 회색). 긴 설명은 마우스를 올리면(title)
       const head = '<li class="lh" aria-hidden="true"><span>레이어</span><span>시민 유형</span><span>판정</span><span title="인명 피해 우려 수심에 닿기까지 남은 시간">인명 피해까지</span><span>대피 인원</span></li>';
