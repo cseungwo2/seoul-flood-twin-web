@@ -125,13 +125,15 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     }
     const rows = persona.map((pp, p) => {
       const min = m / SPEED[p] / 60, a = gi == null ? null : getAlert(gi, p);
-      const verdict = a?.toDanger == null ? '<span class="ok">이 비에서는 위험 없음</span>'
-        : min <= a.toDanger ? `<span class="ok">위험 전 도착 (여유 ${Math.round(a.toDanger - min)}분)</span>` : `<span class="no">도착 전에 위험 (${Math.round(min - a.toDanger)}분 부족)</span>`;
+      // 판정 = 굵은 꼬리표 하나 + 남는/모자란 분
+      const verdict = a?.toDanger == null ? '<span class="tag na">대피 불필요</span>'
+        : min <= a.toDanger ? `<span class="tag ok">도착 가능</span>${Math.round(a.toDanger - min)}분 남음` : `<span class="tag no">늦음</span>${Math.round(min - a.toDanger)}분 부족`;
       return `<tr><td><i class="chip" style="background:${pp.color}"></i>${pp.name}</td><td class="v">${Math.max(1, Math.round(min))}분</td><td>${verdict}</td></tr>`;
     }).join('');
-    const p = f.properties;
-    card.innerHTML = `<button type="button" class="rc-x" aria-label="경로 지우기">✕</button><p class="rc-h">${p.시설명} <span class="km">${(m / 1000).toFixed(2)} km</span> <small>${p.자치구} ${p.행정동} · 수용 ${p.수용인원명 != null ? Math.round(p.수용인원명).toLocaleString('ko-KR') + '명' : '정보 없음'}</small></p>
-      ${startWet ? '<p class="rc-s"><b class="no">출발 지점이 이미 잠김</b></p>' : ''}<table>${rows}</table>`;
+    const p = f.properties, cap = p.수용인원명 != null ? `${Math.round(p.수용인원명).toLocaleString('ko-KR')}명` : '정보 없음';
+    card.innerHTML = `<button type="button" class="rc-x" aria-label="경로 지우기">✕</button><p class="rc-h">${p.시설명}</p>
+      <dl class="rc-f"><div><dt>거리</dt><dd>${(m / 1000).toFixed(2)} km</dd></div><div><dt>수용</dt><dd>${cap}</dd></div><div><dt>위치</dt><dd>${p.자치구} ${p.행정동}</dd></div></dl>
+      ${startWet ? '<p class="rc-s"><b class="no">출발 지점이 이미 잠김</b></p>' : ''}<table><thead><tr><th>시민 유형</th><th class="v">걸어서</th><th>판정</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   // 경로를 보는 동안 3D 건물을 반투명하게(지형 위 선은 건물에 가려지므로)

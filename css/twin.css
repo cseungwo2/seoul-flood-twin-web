@@ -133,16 +133,24 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .askpop .ask-b button { flex: 1; padding: 6px 0; font: 700 13px/1 var(--font); border-radius: 4px; cursor: pointer; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); }
 .askpop .ask-b .go { background: #2E7D4F; border-color: #2E7D4F; color: #fff; }
 .routecard .rc-h { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
-.routecard .km { margin-left: 4px; padding: 1px 6px; font-size: 12px; color: #fff; background: #2E7D4F; border-radius: 3px; vertical-align: 1px; }
 .navtag { padding: 4px 8px; font: 700 12px/1 var(--font); color: #fff; border-radius: 4px; box-shadow: 0 1px 4px rgba(38, 38, 38, 0.3); } /* 위치는 maplibre 가 absolute 로 잡음 */
 .navtag::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: inherit; }
 .navtag.from { background: var(--crimson); border-color: var(--crimson); }
 .navtag.to { background: #2E7D4F; border-color: #2E7D4F; }
-.routecard .rc-h small { font-size: 11px; font-weight: 500; color: var(--ink-2); }
 .routecard .rc-s { margin: 4px 0; color: var(--ink-2); }
 .routecard table { border-collapse: collapse; width: 100%; }
-.routecard td { padding: 2px 0; }
-.routecard td.v { text-align: right; padding: 2px 10px; font-weight: 700; }
+/* 거리 · 수용 · 위치: 이름표(회색) 위, 값(굵게) 아래 */
+.routecard .rc-f { display: flex; gap: 18px; margin: 6px 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.routecard .rc-f dt { font-size: 11px; color: var(--ink-2); }
+.routecard .rc-f dd { margin: 0; font-size: 14px; font-weight: 700; }
+.routecard th { padding: 0 0 4px; font-size: 11px; font-weight: 500; color: var(--ink-2); text-align: left; }
+.routecard td { padding: 3px 0; }
+.routecard .v { text-align: right; padding-right: 12px; }
+.routecard td.v { font-weight: 700; }
+.routecard .tag { display: inline-block; min-width: 54px; margin-right: 6px; padding: 2px 0; text-align: center; font-weight: 700; border-radius: 3px; }
+.routecard .tag.ok { color: #fff; background: #2E7D4F; }
+.routecard .tag.no { color: #fff; background: var(--crimson); }
+.routecard .tag.na { color: var(--ink-2); background: #F0EDE8; }
 .routecard .ok { color: #2E7D4F; font-weight: 700; }
 .routecard .no { color: var(--crimson); font-weight: 700; }
 .maphint.off { opacity: 0; pointer-events: none; }
