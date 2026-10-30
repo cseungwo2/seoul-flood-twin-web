@@ -176,15 +176,15 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       const r = Math.round(S.rain), D = demand(M, S, gi), dMax = Math.max(1, ...D), L = lifeShown(M, S, gi);
       const order = [0, 1, 2, 3, 4, 5].sort((a, b) => RANK[alerts[b].status] - RANK[alerts[a].status] || a - b);
       // 한 줄 = 한 유형: 판정 · 인명 피해까지 남은 시간 · 대피 인원(막대, 해당 없음이면 회색). 긴 설명은 마우스를 올리면(title)
-      const head = '<li class="lh" aria-hidden="true"><span>지도</span><span>시민 유형</span><span>판정</span><span title="인명 피해 우려 수심에 닿기까지 남은 시간">인명 피해까지</span><span>대피 인원</span></li>';
+      const head = '<li class="lh" aria-hidden="true"><span>레이어</span><span>시민 유형</span><span>판정</span><span title="인명 피해 우려 수심에 닿기까지 남은 시간">인명 피해까지</span><span>대피 인원</span></li>';
       const focusP = document.activeElement?.closest?.('#lines li[data-p]')?.dataset.p; // 다시 그려도 키보드 초점 유지
       $('lines').innerHTML = head + order.map((p) => {
         const a = alerts[p], st = a.status;
         const when = st === 'safe' ? '–' : `${Math.max(1, Math.round(a.toDanger))}분`;
         const tip = `${sentence(M, S, gi, p)} · 생활 공간 인명 피해 수심 노출 ${pct(L[p].v)}${L[p].adj ? ` (자원 반영 후 ${pct(L[p].after)})` : ''}${M.low[gi][p] ? ' · 거주 적음(지도 판정 제외)' : ''}`;
         const on = (S.zone >> p) & 1, col = persona[p].color; // 칩: 켬 = 꽉 찬 색, 끔 = 테두리만
-        return `<li class="${st}${on ? ' on' : ''}" data-p="${p}" role="button" tabindex="0" aria-pressed="${!!on}" title="${tip} · 누르면 지도에 예상 피해 지역 ${on ? '끄기' : '켜기'}"><i class="chip" style="background:${on ? col : 'transparent'};box-shadow:inset 0 0 0 2px ${col}"></i>
-          <span class="nm">${persona[p].name}</span><span class="st">${STATUS_WORD[st]}</span><span class="when">${when}</span>
+        return `<li class="${st}${on ? ' on' : ''}" data-p="${p}" role="button" tabindex="0" aria-pressed="${!!on}" title="${tip} · 누르면 지도에 예상 피해 지역 ${on ? '끄기' : '켜기'}"><span class="ly"><i class="chip" style="background:${on ? col : 'transparent'};box-shadow:inset 0 0 0 2px ${col}"></i></span>
+          <span class="nm"><span>${persona[p].name}</span></span><span class="st">${STATUS_WORD[st]}</span><span class="when">${when}</span>
           <span class="ppl"><b>${fmt(D[p])}</b><span class="track"><i style="width:${(D[p] / dMax) * 100}%;background:${persona[p].color}"></i></span></span></li>`;
       }).join('');
       if (focusP != null) $('lines').querySelector(`li[data-p="${focusP}"]`)?.focus();

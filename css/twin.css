@@ -187,26 +187,29 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .gucount .late { border-color: var(--crimson); } .gucount .late b { color: var(--crimson); }
 .gucount .safe b { color: var(--ink-2); font-weight: 500; }
 .lines { list-style: none; margin: 0; padding: 0; }
-.lines li { display: grid; grid-template-columns: 24px minmax(0, 1.3fr) 66px 84px 1fr; align-items: center; gap: 8px; padding: 8px 8px; font-size: 15px; cursor: default; }
+.lines li { display: grid; grid-template-columns: 54px minmax(0, 1.4fr) 66px 92px minmax(0, 0.9fr); align-items: stretch; padding: 0; font-size: 15px; cursor: default; }
+/* 칸마다 세로선: 각 칸이 줄 높이를 꽉 채우고 왼쪽에 선 */
+.lines li > * { display: flex; align-items: center; min-width: 0; padding: 8px; }
+.lines li > * + * { border-left: 1px solid var(--line); }
+.lines .ly, .lines .when, .lines li.lh > :nth-child(1), .lines li.lh > :nth-child(4) { justify-content: center; }
+.lines li.lh > :nth-child(5) { justify-content: flex-end; }
+.lines .nm > span { line-height: 1.25; word-break: keep-all; } /* 좁으면 두 줄로(잘라내지 않음) */
 .lines li + li { border-top: 1px solid var(--line); }
 .lines li[data-p] { cursor: pointer; }
 .lines li[data-p]:hover { background: #F7F4EE; }
 .lines li.on { background: #EFEAE1; box-shadow: inset 3px 0 0 #262626; }
 .lgh { margin: 2px 0 6px; font-size: 13px; color: var(--ink-2); white-space: normal; }
 /* 머리줄: 옅은 띠 + 열마다 아래 값과 같은 정렬(지도 · 인명 피해까지 = 가운데, 대피 인원 = 오른쪽) */
-.lines li.lh { padding: 7px 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); background: #F5F2EC; border-radius: 4px; white-space: nowrap; }
+.lines li.lh { padding: 0; font-size: 13px; font-weight: 700; color: var(--ink-2); background: #F5F2EC; border-radius: 4px; white-space: nowrap; }
 .lines li.lh + li { border-top: 0; }
-.lines li.lh span:nth-child(1), .lines li.lh span:nth-child(4), .lines .when { text-align: center; }
-.lines li.lh span:nth-child(5) { text-align: right; }
-.lines .chip { width: 12px; height: 12px; margin: 0 auto; border-radius: 3px; }
-.lines .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lines .chip { width: 14px; height: 14px; border-radius: 3px; }
 .lines .st { font-weight: 700; font-size: 14px; white-space: nowrap; }
 .lines li.late .st, .lines li.now .st { color: var(--crimson); }
 .lines li.safe .st, .lines li.safe .when, .lines li.safe .ppl b { color: var(--ink-2); font-weight: 500; }
 .lines li.safe .track i { opacity: 0.35; } /* 경보 기준 미만: 노출 인원은 보이되 흐리게 */
 .lines .when { font-weight: 700; font-size: 17px; }
 .lines li.late .when { color: var(--crimson); }
-.lines .ppl { display: flex; flex-direction: column; gap: 3px; text-align: right; }
+.lines .ppl { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 3px; text-align: right; }
 .lines .ppl b { font-size: 15px; }
 .lines .track { height: 5px; background: #F1EDE6; border-radius: 1px; }
 .lines .track i { display: block; height: 100%; min-width: 1px; border-radius: 1px; margin-left: auto; transition: width 120ms ease-out; }
