@@ -14,7 +14,7 @@ export function initWeather(onApply) {
   const load = async () => {
     try {
       const j = await (await fetch(URL)).json();
-      // hourly 강수 = 그 시각까지 지난 1시간 합(mm) → 지금 시각(정시 내림)의 값
+      // 현재 강우량(mm/h) = hourly 강수(그 시각까지 지난 1시간 합 mm) 중 지금 시각(정시 내림)의 값
       const hour = j.current.time.slice(0, 13) + ':00', i = j.hourly.time.indexOf(hour);
       rain = i < 0 ? j.hourly.precipitation.at(-1) : j.hourly.precipitation[i];
       $('wx-temp').textContent = j.current.temperature_2m.toFixed(1);
