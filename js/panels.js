@@ -1,5 +1,5 @@
 // 패널: 왼쪽 슬라이더 · 위 지표 줄 · 오른쪽 선택 구(경보 문장 + 위험 인원 막대 · ARSM 곡선).
-import { sentence, demand, arsmCurve, lifeShown, volunteerPlan } from './model.js';
+import { sentence, demand, arsmCurve, lifeShown, volunteerPlan, capacity } from './model.js';
 
 export const RES = [
   { k: 'shelter', f: 'shelter_cap', name: '대피시설 수용 인원', short: '대피시설', unit: '명' },
@@ -200,7 +200,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       $('sit-list').innerHTML = top.length ? top.map((r) => `<li class="${isOpen(r) ? 'open' : ''}" data-gi="${r.gi}" role="button" tabindex="0" aria-expanded="${isOpen(r)}">
         <div class="sh"><b>${r.gn}</b><span class="sb">${badges(r)}</span>${r.ps.length ? `<span class="sn">${fmt(r.n)}명</span>` : ''}</div>
         ${isOpen(r) ? open(r) : ''}</li>`).join('')
-        : '<li class="none">지금 강우에서 대피가 필요한 자치구 없음</li>';
+        : '';
     },
     pick(none) {
       $('gu-pick').hidden = !none;
@@ -212,6 +212,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
     gu(gi, alerts) {
       guSel.value = gi; resNA(gi);
       const r = Math.round(S.rain), D = demand(M, S, gi), dMax = Math.max(1, ...D), L = lifeShown(M, S, gi);
+      const took = capacity(M, S, gi, D).took ?? D.map(() => 0);   // 유형별 대피시설 수용 인원(자원 꺼짐 · 자료 없음 = 0)
       // 의용소방대 칸: 고른 구의 재해취약자 기준 투입 시한 · 지원 가능 인원
       const v = volunteerPlan(M, S, gi), vp = $('vol-plan');
       vp.hidden = !v;
@@ -228,7 +229,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
         const on = (S.zone >> p) & 1, col = persona[p].color; // 칩: 켬 = 꽉 찬 색, 끔 = 테두리만
         return `<li class="${st}${on ? ' on' : ''}" data-p="${p}" role="button" tabindex="0" aria-pressed="${!!on}" title="${tip} · 누르면 지도에 예상 피해 지역 ${on ? '끄기' : '켜기'}"><span class="ly"><i class="chip" style="background:${on ? col : 'transparent'};box-shadow:inset 0 0 0 2px ${col}"></i></span>
           <span class="nm"><span>${persona[p].name}</span></span><span class="st">${STATUS_WORD[st]}</span><span class="when">${when}</span>
-          <span class="ppl"><span class="n"><b>${fmt(D[p])}</b><small>명</small></span><span class="track"><i style="width:${(D[p] / dMax) * 100}%;background:${persona[p].color}"></i></span></span></li>`;
+          <span class="ppl"><span class="n"><b>${fmt(D[p])}</b><small>명</small></span>${took[p] >= 0.5 ? `<span class="acc">${took[p] >= D[p] - 0.5 ? '전원 수용' : `수용 ${fmt(took[p])}`}</span>` : ''}<span class="track"><i style="width:${(D[p] / dMax) * 100}%;background:${persona[p].color}"><u style="width:${D[p] > 0 ? Math.min(100, took[p] / D[p] * 100) : 0}%"></u></i></span></span></li>`;
       }).join('');
       if (focusP != null) $('lines').querySelector(`li[data-p="${focusP}"]`)?.focus();
       const n = { late: 0, now: 0, safe: 0 };

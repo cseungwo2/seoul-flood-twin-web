@@ -143,6 +143,15 @@ export function evacMin(M, gi, p) {
   return e.prep_min[p] + e.dist_m[gi][p] / e.speed_ms[p] / 60;
 }
 
+// ponytail: 의용소방대가 도우면 재해취약자 준비 시간이 일반 성인 수준(+10분 없음)이 된다고 가정. 실측 근거 생기면 ASSIST_MIN 교체
+const ASSIST_MIN = 10;
+/** 재해취약자(P1) 대피 시간: 의용소방대 · 자율방재단 지원 비율 f = min(1, 지원 가능 ÷ 대피 인원)만큼 준비 시간 ASSIST_MIN 단축. */
+function evacAssisted(M, S, gi, toDanger) {
+  const base = evacMin(M, gi, 0), vol = M.res.volunteers[gi], need = demand(M, S, gi)[0];
+  if (vol == null || !(S.mult.volunteers > 0) || toDanger == null || !(need > 0)) return base;
+  return base - ASSIST_MIN * Math.min(1, vol * S.mult.volunteers * toDanger / Math.max(1, base) / need);
+}
+
 /** 판정 {status: 'late'(즉시 대피) | 'now'(대피 권고) | 'safe'(해당 없음), toDanger, evac, alertIn, onset}.
  *  인명 피해까지(toDanger) = 이 비가 이어질 때 대피 인원의 절반이 인명 위해 수심에 닿기까지(문턱 % 없음:
  *  지금 노출 % 의 절반에 처음 닿는 강우 → 60 × 그 강우 ÷ 지금 강우). 노출 0 → 해당 없음.
@@ -150,9 +159,10 @@ export function evacMin(M, gi, p) {
  *  toDanger ≤ 대피 시간 → 즉시 대피, 그보다 길면 대피 권고. alertIn = toDanger − 대피 시간(여유). */
 export function alert(M, S, gi, p) {
   S = norm(S);
-  const now = shownAt(M, S, gi, p, ri(M, S.rain)), evac = evacMin(M, gi, p);
+  const now = shownAt(M, S, gi, p, ri(M, S.rain));
   const onset = now > 0 ? onsetRain(M, gi, p, now / 2, S) : onsetRain(M, gi, p, 0, S);
   const toDanger = now > 0 ? minutesToDanger(onset, S.rain) : null;
+  const evac = p === 0 ? evacAssisted(M, S, gi, toDanger) : evacMin(M, gi, p);
   if (toDanger == null) return { status: 'safe', toDanger: null, evac, alertIn: null, onset };
   const alertIn = toDanger - evac;
   return { status: alertIn <= 0 ? 'late' : 'now', toDanger, evac, alertIn, onset };
@@ -178,6 +188,7 @@ function capacityWith(M, S, gi, D, toDangerP1) {
     const took = Math.min(pool, fin(D[p]), c ?? Infinity);
     pool -= took;
     C.taken = (C.taken ?? 0) + took;   // 대피시설에 실제로 들어간 인원(회복 인원 계산용)
+    (C.took ??= new Array(6).fill(0))[p] = took;   // 유형별 수용 인원(경보 표 '수용 n명')
   }
   return C;
 }
@@ -195,9 +206,10 @@ export function volunteerPlan(M, S, gi) {
   S = norm(S);
   const vol = M.res.volunteers[gi];
   if (vol == null) return null;
-  const a = alert(M, S, gi, 0), need = demand(M, S, gi)[0];
+  const a = alert(M, S, gi, 0), need = demand(M, S, gi)[0], base = evacMin(M, gi, 0);
   if (a.toDanger == null) return { deadline: null, help: 0, need };
-  return { deadline: a.alertIn, help: vol * S.mult.volunteers * a.toDanger / Math.max(1, a.evac), need };
+  // 투입 시한 = 지원 없이 대피를 마칠 수 있는 마지막 출동 시점(인명 피해까지 − 기본 대피 시간)
+  return { deadline: a.toDanger - base, help: vol * S.mult.volunteers * a.toDanger / Math.max(1, base), need };
 }
 
 export function capacity(M, S, gi, D) {
