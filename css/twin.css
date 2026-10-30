@@ -116,14 +116,19 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .sit-list .sb em { font-style: normal; font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 10px; color: var(--crimson); background: var(--crimson-pale); white-space: nowrap; }
 .sit-list .sb em.late { color: #fff; background: var(--crimson); }
 .sit-list .sn { font-size: 14px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
-.sit-list .sa { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
-.sit-list .sa li { display: grid; grid-template-columns: 12px auto auto; grid-template-areas: "c n s" ". x x"; justify-content: start; align-items: center; gap: 2px 6px; font-size: 14px; }
-.sit-list .sa .chip { grid-area: c; width: 10px; height: 10px; border-radius: 2px; margin: 0; }
-.sit-list .sa .sp { grid-area: n; font-weight: 700; }
-.sit-list .sa .ss { grid-area: s; font-size: 12px; font-weight: 700; color: var(--crimson); }
-.sit-list .sa .ss.late { color: #fff; background: var(--crimson); padding: 0 6px; border-radius: 8px; }
-.sit-list .sa .sx { grid-area: x; color: var(--ink-2); }
-.sit-list .sa .sx::before { content: "→ "; }
+.sit-list .sb em.none { color: var(--ink-2); background: #EFEBE4; }
+/* 펼친 구: 유형별 작은 카드 */
+.sit-list .sa { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.sit-list .sa li { padding: 7px 10px; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 4px; }
+.sit-list .sa-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sit-list .sa-h b { font-size: 15px; }
+.sit-list .ss { flex: none; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 10px; color: var(--crimson); background: var(--crimson-pale); }
+.sit-list .ss.late { color: #fff; background: var(--crimson); }
+.sit-list .ss { color: var(--ink-2); background: #EFEBE4; } .sit-list .ss.soon { color: var(--crimson); background: var(--crimson-pale); } .sit-list .ss.late { color: #fff; background: var(--crimson); }
+.sit-list .sb em { color: var(--ink-2); background: #EFEBE4; } .sit-list .sb em.soon { color: var(--crimson); background: var(--crimson-pale); } .sit-list .sb em.late { color: #fff; background: var(--crimson); }
+.sit-list .sa p { margin: 3px 0 0; font-size: 14px; color: var(--ink-2); }
+.sit-list .sa-n { margin: 8px 2px 0; font-size: 13px; color: var(--ink-2); }
+.sit-list .sa-n b { margin-right: 6px; padding: 1px 7px; font-size: 12px; border-radius: 10px; background: #EFEBE4; }
 .panel.left > .sec-rain, .panel.left > #res, .panel.left > .sit { flex: none; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
 .panel.left > .sec-rain > summary, .panel.left .grp { margin: -12px -14px 12px; padding: 8px 14px; font-size: 17px; font-weight: 700; color: #fff; background: #3A3632; }
 .panel.left .grp { margin: 0; }

@@ -123,7 +123,13 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
   }
 
   // 상황 알림 줄 누르기 = 그 구 고르기(지도 이동 + 펼쳐서 필요한 대응)
-  const sitPick = (li) => { if (li?.dataset.gi != null) onSelect(+li.dataset.gi); };
+  let sitShut = null, sitSel = null; // sitShut = 펼쳤다가 접은 구
+  const sitPick = (li) => {
+    if (li?.dataset.gi == null) return;
+    const gi = +li.dataset.gi;
+    if (gi === sitSel) { sitShut = sitShut === gi ? null : gi; onChange(); return; }   // 같은 구 다시 누름 = 접기/펴기
+    sitShut = null; onSelect(gi);
+  };
   $('sit-list').addEventListener('click', (e) => sitPick(e.target.closest('li[data-gi]')));
   $('sit-list').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sitPick(e.target.closest('li[data-gi]')); } });
 
@@ -174,15 +180,26 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
     /** 고른 구 없음(처음 · 서울 밖 클릭) = 안내 한 줄만, 있음 = 경보 · 안전 마진. */
     /** 상황 알림: 위험한 구를 급한 순(즉시 대피 수 → 가장 짧은 여유)으로 6개, 고른 구는 맨 위에 펼쳐서 유형별 필요한 대응. */
     situation(A, DG, sel) {
-      const rows = M.gn.map((gn, gi) => {
+      sitSel = sel;
+      const all = M.gn.map((gn, gi) => {
         const ps = A[gi].map((a, p) => ({ p, a })).filter(({ a }) => a.status !== 'safe').sort((x, y) => RANK[y.a.status] - RANK[x.a.status] || x.a.alertIn - y.a.alertIn);
-        return { gi, gn, ps, late: ps.filter(({ a }) => a.status === 'late').length, min: ps.length ? ps[0].a.alertIn : Infinity, n: ps.reduce((t, { p }) => t + DG[gi][p], 0) };
-      }).filter((r) => r.ps.length).sort((x, y) => y.late - x.late || x.min - y.min);
-      const top = rows.slice(0, 6), s = rows.find((r) => r.gi === sel);
-      if (s && !top.includes(s)) top.unshift(s);
-      $('sit-list').innerHTML = top.length ? top.map((r) => `<li class="${r.gi === sel ? 'open' : ''}" data-gi="${r.gi}" role="button" tabindex="0">
-        <div class="sh"><b>${r.gn}</b><span class="sb">${r.late ? `<em class="late">즉시 대피 ${r.late}</em>` : ''}${r.ps.length - r.late ? `<em>대피 권고 ${r.ps.length - r.late}</em>` : ''}</span><span class="sn">${fmt(r.n)}명</span></div>
-        ${r.gi === sel ? `<ul class="sa">${r.ps.map(({ p, a }) => `<li><i class="chip" style="background:${persona[p].color}"></i><span class="sp">${persona[p].name}</span><span class="ss ${a.status}">${STATUS_WORD[a.status]}</span><span class="sx">${ACTION[p]}</span></li>`).join('')}</ul>` : ''}</li>`).join('')
+        const safe = A[gi].map((a, p) => p).filter((p) => A[gi][p].status === 'safe');
+        return { gi, gn, ps, safe, late: ps.filter(({ a }) => a.status === 'late').length, min: ps.length ? ps[0].a.alertIn : Infinity, n: ps.reduce((t, { p }) => t + DG[gi][p], 0) };
+      });
+      const rows = all.filter((r) => r.ps.length).sort((x, y) => y.late - x.late || x.min - y.min);
+      const top = rows.slice(0, 6);
+      if (sel != null && !top.some((r) => r.gi === sel)) top.unshift(all[sel]);   // 고른 구는 목록 밖 · 해당 없음이어도 맨 위에
+      // 펼친 구: 유형마다 작은 카드(색 띠 · 이름 · 판정 꼬리표 / 필요한 대응), 해당 없음 유형은 맨 아래 한 줄
+      // 꼬리표 = 즉시 대피, 아니면 '여유 n분'(다 대피 권고여도 급한 정도가 보이게, 15분 이하 진하게)
+      const tag = (a) => (a.status === 'late' ? '<span class="ss late">즉시 대피</span>' : `<span class="ss${a.alertIn <= 15 ? ' soon' : ''}">여유 ${Math.max(1, Math.round(a.alertIn))}분</span>`);
+      const open = (r) => `<ul class="sa">${r.ps.map(({ p, a }) => `<li style="--c:${persona[p].color}"><div class="sa-h"><b>${persona[p].name}</b>${tag(a)}</div><p>${ACTION[p]}</p></li>`).join('')}</ul>`
+        + (r.safe.length ? `<p class="sa-n"><b>해당 없음</b>${r.safe.map((p) => persona[p].name).join(', ')}</p>` : '');
+      const badges = (r) => !r.ps.length ? '<em class="none">해당 없음</em>'
+        : r.late ? `<em class="late">즉시 대피 ${r.late}</em>` : `<em${r.min <= 15 ? ' class="soon"' : ''}>최소 여유 ${Math.max(1, Math.round(r.min))}분</em>`;
+      const isOpen = (r) => r.gi === sel && sitShut !== sel;   // 펼친 구를 한 번 더 누르면 접힘
+      $('sit-list').innerHTML = top.length ? top.map((r) => `<li class="${isOpen(r) ? 'open' : ''}" data-gi="${r.gi}" role="button" tabindex="0" aria-expanded="${isOpen(r)}">
+        <div class="sh"><b>${r.gn}</b><span class="sb">${badges(r)}</span>${r.ps.length ? `<span class="sn">${fmt(r.n)}명</span>` : ''}</div>
+        ${isOpen(r) ? open(r) : ''}</li>`).join('')
         : '<li class="none">지금 강우에서 대피가 필요한 자치구 없음</li>';
     },
     pick(none) {
