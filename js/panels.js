@@ -89,7 +89,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
   $('res').innerHTML = '<div class="sec grp">대응 자원</div>' + RES.map((r) => {
     return `<details class="sec sec-res res-item off" open><summary><span>${r.name}</span>
       <input type="checkbox" role="switch" class="tog" id="t-${r.k}" aria-label="${r.name} 켜기"></summary>
-      <label class="row" for="s-${r.k}"><span>지금 보유량 대비</span><output id="o-${r.k}">100 %</output></label>
+      <label class="row" for="s-${r.k}"><span>현 보유량 대비</span><output id="o-${r.k}">100 %</output></label>
       <input id="s-${r.k}" type="range" min="0" max="300" step="10" value="100" disabled>
       <p class="res-na" id="na-${r.k}" hidden></p></details>`;
   }).join('');
@@ -185,7 +185,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
         const on = (S.zone >> p) & 1, col = persona[p].color; // 칩: 켬 = 꽉 찬 색, 끔 = 테두리만
         return `<li class="${st}${on ? ' on' : ''}" data-p="${p}" role="button" tabindex="0" aria-pressed="${!!on}" title="${tip} · 누르면 지도에 예상 피해 지역 ${on ? '끄기' : '켜기'}"><span class="ly"><i class="chip" style="background:${on ? col : 'transparent'};box-shadow:inset 0 0 0 2px ${col}"></i></span>
           <span class="nm"><span>${persona[p].name}</span></span><span class="st">${STATUS_WORD[st]}</span><span class="when">${when}</span>
-          <span class="ppl"><b>${fmt(D[p])}</b><span class="track"><i style="width:${(D[p] / dMax) * 100}%;background:${persona[p].color}"></i></span></span></li>`;
+          <span class="ppl"><span class="n"><b>${fmt(D[p])}</b><small>명</small></span><span class="track"><i style="width:${(D[p] / dMax) * 100}%;background:${persona[p].color}"></i></span></span></li>`;
       }).join('');
       if (focusP != null) $('lines').querySelector(`li[data-p="${focusP}"]`)?.focus();
       const n = { late: 0, now: 0, safe: 0 };
