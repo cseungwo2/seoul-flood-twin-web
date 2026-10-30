@@ -97,27 +97,43 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; margin-top: 6px; }
 .row output { font-weight: 700; font-size: 17px; white-space: nowrap; margin-left: 8px; }
 .hint { margin: 0 0 6px; font-size: 14px; color: var(--ink-2); }
-#res { display: contents; }
+#res { display: block; }
 .grp { padding-bottom: 0; font-size: 14px; font-weight: 700; color: var(--ink-2); }
 .grp + .sec { border-top: 0; }
+
+/* 왼쪽 = 카드 2장(강우 · 대응 자원), 큰 제목 = 상단 요약 칸과 같은 진한 띠, 자원 이름 = 소제목 */
+.panel.left { background: transparent; border: 0; display: flex; flex-direction: column; gap: 10px; }
+.panel.left > .sec-rain, .panel.left > #res { flex: none; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.panel.left > .sec-rain > summary, .panel.left .grp { margin: -12px -14px 12px; padding: 8px 14px; font-size: 17px; font-weight: 700; color: #fff; background: #3A3632; }
+.panel.left .grp { margin: 0; }
+.panel.left > .sec-rain > summary::after { border-color: #fff; }
+.panel.left .sec-res > summary { font-size: 16px; color: var(--ink); padding-left: 9px; box-shadow: inset 3px 0 0 var(--crimson); }
 
 /* ---------- 지도 ---------- */
 .mapwrap { position: relative; min-height: 0; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); background: #ECE8E0; }
 #map { position: absolute; inset: 0; }
 .legend {
-  position: absolute; left: 10px; bottom: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
-  padding: 8px 10px; font-size: 14px;
+  position: absolute; left: 10px; bottom: 10px; width: 290px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 14px; font-size: 14px; box-shadow: 0 2px 8px rgba(38, 38, 38, 0.08);
 }
-.legend > summary { cursor: pointer; font-weight: 700; color: var(--crimson); }
+.legend > summary { cursor: pointer; font-size: 15px; font-weight: 700; color: var(--ink); }
 .legend[open] > summary { margin-bottom: 4px; }
-.lgt { margin: 0 0 3px; font-weight: 700; color: var(--ink); }
-.lgt + .lgrid { margin-bottom: 4px; }
-.lgrid + .lg.full { margin-bottom: 6px; }
-.lgrid { display: grid; grid-template-columns: auto auto auto; gap: 3px 12px; }
-.lg { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.lg { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+/* 범례 = 칸 3개(예상 피해 지역 · 침수 수심 · 대피시설), 칸 사이 가는 선 */
+.lgs { padding: 8px 0; }
+.lgs + .lgs { border-top: 1px solid var(--line); }
+.lgs:last-child { padding-bottom: 0; }
+.lgs[hidden] { display: none; }
+.lgt { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.zchips { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.zchips span { display: inline-flex; align-items: center; gap: 6px; }
+.zchips i { width: 12px; height: 12px; border-radius: 3px; }
+/* 침수 수심: 이어진 띠 + 눈금 숫자(칸 경계 아래) */
+.ramp { display: grid; grid-template-columns: repeat(3, 1fr); height: 10px; border-radius: 2px; overflow: hidden; }
+.ramp .w1 { background: var(--w1); } .ramp .w2 { background: var(--w2); } .ramp .w3 { background: var(--w3); }
+.ramp-l { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 4px; font-size: 13px; color: var(--ink-2); text-align: center; white-space: nowrap; }
 .lg[hidden] { display: none; }
 .sw { width: 14px; height: 10px; display: inline-block; border: 1px solid var(--line-2); }
-.sw.w1 { background: var(--w1); border-color: var(--w1); }
 .sw.w2 { background: var(--w2); border-color: var(--w2); }
 .sw.w3 { background: var(--w3); border-color: var(--w3); }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); border: 1.5px solid #fff; box-shadow: 0 0 0 1px var(--ink); display: inline-block; margin: 0 2px; }
@@ -198,7 +214,6 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .lines li[data-p] { cursor: pointer; }
 .lines li[data-p]:hover { background: #F7F4EE; }
 .lines li.on { background: #EFEAE1; box-shadow: inset 3px 0 0 #262626; }
-.lgh { margin: 2px 0 6px; font-size: 13px; color: var(--ink-2); white-space: normal; }
 /* 머리줄: 옅은 띠 + 열마다 아래 값과 같은 정렬(지도 · 인명 피해까지 = 가운데, 대피 인원 = 오른쪽) */
 .lines li.lh { padding: 0; font-size: 13px; font-weight: 700; color: var(--ink-2); background: #F5F2EC; border-radius: 4px; white-space: nowrap; }
 .lines li.lh + li { border-top: 0; }
@@ -260,6 +275,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .guhead { order: 2; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; }
   .sec-say { order: 3; }
   .sec-judge { order: 4; }
+  #res { display: contents; } /* 휴대폰: 자원 칸을 세로 순서에 섞음 */
   .grp, .sec-res { order: 5; }
   .chartbox { height: 260px; }
   .grp { background: none; border: 0; padding: 4px 2px 0; }

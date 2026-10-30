@@ -78,11 +78,9 @@ function showSel() {
   if (sel != null) { panels.gu(sel, A[sel]); panels.arsm(sel); }
 }
 function zoneLegend() {
-  const ps = M.persona.filter((_, p) => (S.zone >> p) & 1), el = document.getElementById('lg-zone');
-  el.hidden = document.getElementById('lg-zone-h').hidden = !ps.length; // 켠 유형이 없으면 범례도 숨김
-  if (!ps.length) return;
-  el.querySelector('.sw').style.background = ps.length === 1 ? ps[0].color : `linear-gradient(90deg, ${ps.map((q) => q.color).join(', ')})`;
-  el.querySelector('span').textContent = `예상 피해 지역(${ps.length > 2 ? `${ps.length}개 시민 유형` : ps.map((q) => q.name).join(' · ')})`; // 셋 이상이면 개수만(범례가 길어지지 않게)
+  const ps = M.persona.filter((_, p) => (S.zone >> p) & 1);
+  document.getElementById('lg-zone').hidden = !ps.length; // 켠 유형이 없으면 범례 칸도 숨김
+  document.getElementById('lg-zone-c').innerHTML = ps.map((q) => `<span><i style="background:${q.color}"></i>${q.name}</span>`).join('');
 }
 function schedule() { if (!frame) frame = requestAnimationFrame(render); }
 /** gi = null → 고른 구 없음(서울 전체). */

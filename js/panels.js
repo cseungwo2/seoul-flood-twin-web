@@ -139,7 +139,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       scales: {
         x: { type: 'linear', min: 0, max: M.rain.at(-1), ticks: { stepSize: 25 }, grid: { display: false }, title: { display: true, text: '시간당 강우 (mm/h)' } },
         y: { type: 'logarithmic', min: Y_LO * NUDGE[0] * 0.97, max: Y_HI * NUDGE[5] * 1.03, afterBuildTicks: (ax) => { ax.ticks = Y_TICKS.map((value) => ({ value })); },
-          ticks: { callback: (v) => (v === Y_LO ? '0' : v === Y_HI ? '100+' : String(v)) }, grid: { color: '#EFEBE4' }, border: { display: false }, title: { display: true, text: '안전 마진 (필요한 대응의 몇 배)' } },
+          ticks: { callback: (v) => (v === Y_LO ? '0' : v === Y_HI ? '100+' : String(v)) }, grid: { color: '#EFEBE4' }, border: { display: false }, title: { display: true, text: '안전 마진 수치' } },
       },
       plugins: {
         legend: { display: false }, // 범례는 그래프 위 HTML 격자(#arsm-lg)
