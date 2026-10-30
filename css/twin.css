@@ -173,7 +173,8 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .lines .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lines .st { font-weight: 700; font-size: 12px; }
 .lines li.late .st, .lines li.now .st { color: var(--crimson); }
-.lines li.safe .st, .lines li.safe .when { color: var(--ink-2); font-weight: 500; }
+.lines li.safe .st, .lines li.safe .when, .lines li.safe .ppl b { color: var(--ink-2); font-weight: 500; }
+.lines li.safe .track i { opacity: 0.35; } /* 경보 기준 미만: 노출 인원은 보이되 흐리게 */
 .lines .when { font-weight: 700; font-size: 15px; }
 .lines li.late .when { color: var(--crimson); }
 .lines .ppl { display: flex; flex-direction: column; gap: 3px; text-align: right; }

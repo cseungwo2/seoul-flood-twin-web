@@ -7,7 +7,7 @@ export const RES = [
   { k: 'pump', f: 'pump_lpm', name: '이동식 양수기', short: '이동식 양수기', unit: 'L/min' },
   { k: 'volunteers', f: 'volunteers', name: '의용소방대 · 자율방재단', short: '의용소방대 · 자율방재단', unit: '명' },
 ];
-export const STATUS_WORD = { late: '대피 시간 부족', now: '경보 필요', safe: '위험 없음' };
+export const STATUS_WORD = { late: '대피 시간 부족', now: '경보 필요', safe: '경보 기준 미만' };
 export const RANK = { late: 2, now: 1, safe: 0 };
 const Y_TICKS = [0.1, 0.5, 1, 2, 5, 10, 100];
 const Y_LO = 0.1, Y_HI = 100; // 이 밖의 값은 축 끝에 붙임(0 = 바닥, 100 이상 = 천장)
@@ -177,8 +177,8 @@ export function initPanels({ M, S, sel, onChange, onSelect, onResFocus }) {
       $('cut-name').textContent = `${M.gn[gi]} 침수 범위`; // 고른 구 이름으로
       const r = Math.round(S.rain), D = demand(M, S, gi), dMax = Math.max(1, ...D), L = lifeShown(M, S, gi);
       const order = [0, 1, 2, 3, 4, 5].sort((a, b) => RANK[alerts[b].status] - RANK[alerts[a].status] || a - b);
-      // 한 줄 = 한 유형: 상태 · 경보까지 남은 시간 · 위험 인원(막대). 긴 설명은 마우스를 올리면(title)
-      const head = '<li class="lh" aria-hidden="true"><span></span><span>시민 유형</span><span>상태</span><span>경보까지</span><span>위험 인원</span></li>';
+      // 한 줄 = 한 유형: 상태 · 경보까지 남은 시간 · 침수 노출 인원(막대, 경보 기준 미만이면 회색). 긴 설명은 마우스를 올리면(title)
+      const head = '<li class="lh" aria-hidden="true"><span></span><span>시민 유형</span><span>상태</span><span>경보까지</span><span>침수 노출 인원</span></li>';
       $('lines').innerHTML = head + order.map((p) => {
         const a = alerts[p], st = a.status;
         const when = st === 'safe' ? '–' : st === 'late' ? '지금' : `${Math.max(1, Math.round(a.alertIn))}분`;
@@ -189,7 +189,7 @@ export function initPanels({ M, S, sel, onChange, onSelect, onResFocus }) {
       }).join('');
       const n = { late: 0, now: 0, safe: 0 };
       alerts.forEach((a) => n[a.status]++);
-      $('gu-count').textContent = `대피 시간 부족 ${n.late} · 경보 필요 ${n.now} · 위험 없음 ${n.safe}`;
+      $('gu-count').textContent = `대피 시간 부족 ${n.late} · 경보 필요 ${n.now} · 경보 기준 미만 ${n.safe}`;
       arsmChart.options.plugins.guides.rain = r;
       arsmChart.options.plugins.guides.noDemand = !D.some((d) => d > 0);
       arsmChart.draw();
