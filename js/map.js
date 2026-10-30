@@ -275,7 +275,7 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   // 지도 색 = 침수 수심 · 예상 피해 지역 · 대피시설만(10/31 승우: 회복 구역 · 정보 없음 빗금 뺌)
   const sel = ['boolean', ['feature-state', 'selected'], false];
   map.addLayer({ id: 'gu-line', type: 'line', source: 'gu', paint: {
-    'line-color': ['case', sel, '#8D0022', '#8C857A'], 'line-width': ['case', sel, 1.2, 0.9] } }, firstSymbol);
+    'line-color': '#8C857A', 'line-width': 0.9 } }, firstSymbol); // 고른 구도 선은 같게(표시는 안쪽 번짐만)
 
   const guBox = gu.features.map((f) => ({ gn: f.properties.gn, gi: f.properties.gi, b: bboxOf(f.geometry) })); // 구 범위(띄우기 · 걷는 길 불러오기)
   try {
@@ -314,10 +314,14 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   map.addSource('seoul-mask', { type: 'geojson', data: BASE + 'data/seoul_mask.geojson' });
   map.addLayer({ id: 'seoul-mask', type: 'fill', source: 'seoul-mask', paint: { 'fill-color': '#F2EEE7' } });
 
-  // 고른 구 띄우기: 구로 날아가 기울이고, 얇은 크림슨 선(gu-line) + 구 안쪽으로만 연분홍 번짐(line-offset). 다른 구는 흐리게 하지 않음(10/31 E안)
-  map.addLayer({ id: 'gu-glow', type: 'line', source: 'gu', filter: ['==', ['get', 'gi'], -1], layout: { 'line-join': 'round' },
-    paint: { 'line-color': '#8D0022', 'line-width': 12, 'line-blur': 10, 'line-offset': 6, 'line-opacity': 0, 'line-opacity-transition': { duration: 900 } } }, 'seoul-mask');
-  const GLOW = { 'gu-glow': 0.45 };
+  // 고른 구 띄우기: 구로 날아가 기울이고, 선 없이 구 안쪽으로만 크림슨 번짐(line-offset). 다른 구는 흐리게 하지 않음(10/31)
+  // 번짐 3겹: 경계에서 가장 진하고(좁게) 안쪽으로 갈수록 넓고 옅게 → 안쪽 그라데이션. [폭, 흐림, 안쪽으로 밀기, 불투명도]
+  const GLOW = {};
+  [[6, 3, 3, 0.85], [16, 12, 11, 0.45], [30, 24, 26, 0.22]].forEach(([w, bl, off, op], i) => {
+    const id = `gu-glow${i}`; GLOW[id] = op;
+    map.addLayer({ id, type: 'line', source: 'gu', filter: ['==', ['get', 'gi'], -1], layout: { 'line-join': 'round' },
+      paint: { 'line-color': '#8D0022', 'line-width': w, 'line-blur': bl, 'line-offset': off, 'line-opacity': 0, 'line-opacity-transition': { duration: 900 } } }, 'seoul-mask');
+  });
   const home = { ...camera, bounds: undefined };
   const back = document.getElementById('mapback');
   const lift = (gi) => {
