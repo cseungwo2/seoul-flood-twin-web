@@ -260,7 +260,8 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .lines .ppl { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 5px; }
 .lines .ppl .n { display: flex; justify-content: center; align-items: baseline; gap: 2px; }
 .lines .ppl small { font-size: 13px; color: var(--ink-2); }
-.lines .ppl .acc { font-size: 12px; font-weight: 700; color: #2E7D4F; white-space: nowrap; } /* 대피시설 수용 인원 */
+.lines .ppl .acc { font-size: 12px; font-weight: 700; color: #2E7D4F; white-space: nowrap; }
+.lines .ppl .acc.need { color: var(--crimson); } /* 재해취약자: 대피시설 자리는 있어도 지원 인력이 모자람 */ /* 대피시설 수용 인원 */
 .lines .track u { display: block; height: 100%; background: #2E7D4F; transition: width 120ms ease-out; } /* 막대 안 초록 = 수용된 몫 */
 .lines .ppl b { font-size: 16px; letter-spacing: -0.01em; }
 .lines .track { height: 4px; background: #EFEBE4; border-radius: 2px; overflow: hidden; }

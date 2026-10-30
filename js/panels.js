@@ -231,7 +231,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
         const on = (S.zone >> p) & 1, col = persona[p].color; // 칩: 켬 = 꽉 찬 색, 끔 = 테두리만
         return `<li class="${st}${on ? ' on' : ''}" data-p="${p}" role="button" tabindex="0" aria-pressed="${!!on}" title="${tip} · 누르면 지도에 예상 피해 지역 ${on ? '끄기' : '켜기'}"><span class="ly"><i class="chip" style="background:${on ? col : 'transparent'};box-shadow:inset 0 0 0 2px ${col}"></i></span>
           <span class="nm"><span>${persona[p].name}</span></span><span class="st">${STATUS_WORD[st]}</span><span class="when">${when}</span>
-          <span class="ppl"><span class="n"><b>${fmt(D[p])}</b><small>명</small></span>${took[p] >= 0.5 ? `<span class="acc">${took[p] >= D[p] - 0.5 ? '전원 수용' : `수용 ${fmt(took[p])}`}</span>` : ''}<span class="track"><i style="width:${(D[p] / dMax) * 100}%;background:${persona[p].color}"><u style="width:${D[p] > 0 ? Math.min(100, took[p] / D[p] * 100) : 0}%"></u></i></span></span></li>`;
+          <span class="ppl"><span class="n"><b>${fmt(D[p])}</b><small>명</small></span>${took[p] >= 0.5 ? `<span class="acc">${took[p] >= D[p] - 0.5 ? '전원 수용' : `수용 ${fmt(took[p])}`}</span>` : ''}${p === 0 && S.mult.shelter > 0 && D[0] >= 0.5 && took[0] < D[0] - 0.5 ? '<span class="acc need" title="재해취약자는 의용소방대 · 자율방재단이 도와야 대피시설에 들어갈 수 있습니다">의용소방대 필요</span>' : ''}<span class="track"><i style="width:${(D[p] / dMax) * 100}%;background:${persona[p].color}"><u style="width:${D[p] > 0 ? Math.min(100, took[p] / D[p] * 100) : 0}%"></u></i></span></span></li>`;
       }).join('');
       if (focusP != null) $('lines').querySelector(`li[data-p="${focusP}"]`)?.focus();
       const n = { late: 0, now: 0, safe: 0 };
