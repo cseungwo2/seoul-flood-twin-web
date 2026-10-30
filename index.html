@@ -48,8 +48,10 @@
   <section class="mapwrap" aria-label="서울 지도">
     <div id="map"></div>
     <canvas class="rain" id="rain" aria-hidden="true"></canvas>
-    <button type="button" class="mapback" id="mapback" hidden>← 서울 전체</button>
-    <button type="button" class="routebtn" id="route-btn" aria-pressed="false" hidden>대피 경로</button>
+    <div class="mapbtns"><!-- 지도 버튼은 오른쪽 위에 모음 -->
+      <button type="button" class="mapback" id="mapback" hidden>서울 전체</button>
+      <button type="button" class="routebtn" id="route-btn" aria-pressed="false" hidden>대피 경로</button>
+    </div>
     <div class="routecard" id="route-card" hidden aria-live="polite"></div>
     <p class="mapfail" id="mapfail" hidden>지도를 불러오지 못했습니다 — 계산 결과는 그대로 볼 수 있습니다</p>
     <details class="legend" id="legend">
