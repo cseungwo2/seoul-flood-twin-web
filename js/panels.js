@@ -188,7 +188,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       });
       const rows = all.filter((r) => r.ps.length).sort((x, y) => y.late - x.late || x.min - y.min);
       const top = rows.slice(0, 6);
-      if (sel != null && !top.some((r) => r.gi === sel)) top.unshift(all[sel]);   // 고른 구는 목록 밖 · 해당 없음이어도 맨 위에
+      if (sel != null && all[sel].ps.length && !top.some((r) => r.gi === sel)) top.unshift(all[sel]);   // 고른 구가 목록 밖이면 맨 위에(대피 필요한 유형이 있을 때만)
       // 펼친 구: 유형마다 작은 카드(색 띠 · 이름 · 판정 꼬리표 / 필요한 대응), 해당 없음 유형은 맨 아래 한 줄
       // 꼬리표 = 즉시 대피, 아니면 '여유 n분'(다 대피 권고여도 급한 정도가 보이게, 15분 이하 진하게)
       const tag = (a) => (a.status === 'late' ? '<span class="ss late">즉시 대피</span>' : `<span class="ss${a.alertIn <= 15 ? ' soon' : ''}">여유 ${Math.max(1, Math.round(a.alertIn))}분</span>`);
