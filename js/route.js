@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 잠긴 길(0.3 m 이상 = 인명 위해 수심)과 계단을 피해 가장 가까운 대피시설까지 걷는 길.
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=3d6c347';
+import { BUILD_OP } from './map.js?v=6710da0';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -123,7 +123,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     goal.setLngLat(f.geometry.coordinates).addTo(map);
     if (fit) { // 새 경로: 경로 전체가 보이게(오른쪽 아래 카드 자리는 비움)
       const xs = line.map((c) => c[0]), ys = line.map((c) => c[1]);
-      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: matchMedia('(max-width: 1180px)').matches ? { top: 40, left: 30, right: 30, bottom: Math.round(map.getContainer().clientHeight * (moreOpen ? 0.55 : 0.35)) } : { top: 80, left: 60, right: 60, bottom: 260 }, pitch: 30, maxZoom: 17, duration: 1000 });
+      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: matchMedia('(max-width: 1180px)').matches ? { top: 40, left: 30, right: 30, bottom: Math.round(map.getContainer().clientHeight * (moreOpen ? 0.55 : matchMedia('(max-width: 700px)').matches ? 0.25 : 0.35)) } : { top: 80, left: 60, right: 60, bottom: 260 }, pitch: 30, maxZoom: 17, duration: 1000 });
     }
     const n = { ok: 0, no: 0 };
     const rows = persona.map((pp, p) => {

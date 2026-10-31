@@ -44,8 +44,10 @@ h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spac
 .kpi dd span { font-size: 16px; color: var(--ink-2); }
 #k-late { color: var(--crimson); }
 #k-saved { color: #2E7D4F; }
-.toast { position: fixed; left: 50%; top: 84px; z-index: 50; transform: translate(-50%, -8px); max-width: min(560px, calc(100% - 32px)); padding: 10px 16px; font-size: 15px; font-weight: 600; color: #fff; background: rgba(38, 38, 38, 0.92); border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity 250ms ease-out, transform 250ms ease-out; }
+.toast { position: fixed; left: 50%; top: 84px; z-index: 70; transform: translate(-50%, -8px); max-width: min(560px, calc(100% - 32px)); padding: 10px 16px; font-size: 15px; font-weight: 600; color: #fff; background: rgba(38, 38, 38, 0.92); border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity 250ms ease-out, transform 250ms ease-out; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+/* 폰: 서랍(z 60)보다 위, 화면 아래 가운데(스위치를 누른 손가락 근처 · 서랍 글자 안 가림). 11/1 Duo 접힘에서 서랍에 가려 안 보였음 */
+@media (max-width: 700px) { .toast { top: auto; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translate(-50%, 8px); text-align: center; } }
 /* 자원 켜기 스위치 */
 .tog { appearance: none; margin: 0 8px 0 auto; width: 34px; height: 20px; border-radius: 10px; background: var(--line-2); position: relative; cursor: pointer; flex: none; transition: background-color 150ms ease-out; }
 .tog::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 150ms ease-out; }
@@ -246,13 +248,15 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .gucount b { font-size: 17px; }
 .gucount .late { border-color: var(--crimson); } .gucount .late b { color: var(--crimson); }
 .gucount .safe b { color: var(--ink-2); font-weight: 500; }
-.lines { list-style: none; margin: 0; padding: 0; }
-.lines li { display: grid; grid-template-columns: 50px minmax(0, 1.45fr) 64px 82px minmax(0, 1fr); align-items: stretch; padding: 0; font-size: 15px; cursor: default; }
+/* 칸 폭 = 줄마다 따로가 아니라 표 전체에서 가장 긴 글자에 맞춤(subgrid). 이름 · 판정은 한 줄 고정, 좁으면 글자만 작아짐(11/1 승우) */
+.lines { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto auto auto auto minmax(56px, 1fr); container-type: inline-size; }
+.lines li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: stretch; padding: 0; font-size: clamp(10.5px, 3.9cqi, 15px); cursor: default; }
 /* 칸마다 세로선: 각 칸이 줄 높이를 꽉 채우고 왼쪽에 선 */
 .lines li > * { display: flex; align-items: center; min-width: 0; padding: 8px; }
 .lines li > * + * { border-left: 1px solid var(--line); }
 .lines li > * { justify-content: center; text-align: center; } /* 모든 칸 가운데 정렬 */
-.lines .nm > span { line-height: 1.25; word-break: keep-all; } /* 좁으면 두 줄로(잘라내지 않음) */
+.lines .ly, .lines .nm, .lines .st, .lines .when { min-width: auto; white-space: nowrap; } /* 이름 · 판정 칸은 글자보다 좁아지지 않음(나머지 칸이 줄어듦) */
+.lines .nm > span { line-height: 1.25; white-space: nowrap; }
 .lines li + li { border-top: 1px solid var(--line); }
 .lines li[data-p] { cursor: pointer; }
 .lines li[data-p]:hover { background: #F7F4EE; }
@@ -261,7 +265,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .lines li.lh { padding: 0; font-size: 13px; font-weight: 700; color: var(--ink-2); background: #F5F2EC; border-radius: 4px; white-space: nowrap; }
 .lines li.lh + li { border-top: 0; }
 .lines .chip { width: 14px; height: 14px; border-radius: 3px; }
-.lines .st { font-weight: 700; font-size: 14px; white-space: nowrap; }
+.lines .st { font-weight: 700; font-size: 0.93em; white-space: nowrap; }
 .lines li.late .st, .lines li.now .st { color: var(--crimson); }
 .lines li.safe .st, .lines li.safe .when, .lines li.safe .ppl b { color: var(--ink-2); font-weight: 500; }
 .lines li.safe .track i { opacity: 0.35; } /* 경보 기준 미만: 노출 인원은 보이되 흐리게 */
@@ -399,13 +403,10 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 
 /* 좁은 오른쪽 패널(휴대폰 · 두 칸 태블릿): 경보 표 5칸을 줄이고, 머리줄 · 판정 · 수용은 두 줄 허용(잘라내지 않음) */
 @container (max-width: 420px) {
-  .lines li { grid-template-columns: 44px minmax(0, 1.3fr) 54px 58px minmax(0, 1fr); font-size: 14px; }
   .lines li > * { padding: 6px 3px; }
-  .lines li.lh > * { white-space: normal; word-break: keep-all; line-height: 1.25; padding: 6px 2px; }
-  .lines .nm > span { overflow-wrap: anywhere; }
-  .lines .st { font-size: 13px; white-space: normal; word-break: keep-all; }
-  .lines .when { font-size: 15px; }
-  .lines .ppl b { font-size: 15px; }
+  .lines li.lh > * { white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.25; padding: 6px 2px; }
+  .lines .when { font-size: 1em; }
+  .lines .ppl b { font-size: 1em; }
   .lines .ppl .n { flex-wrap: wrap; }
   .lines .ppl .acc { white-space: normal; word-break: keep-all; text-align: center; }
   .alg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -423,14 +424,18 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 }
 @media (max-width: 700px) {
   .kpi.wx { display: none; }
-  /* 경로 카드 = 낮은 시트: 거리 · 수용 · 위치를 한 줄 작은 칸으로, 표는 접힘(펼치면 카드 안에서 스크롤) */
-  .routecard { max-height: 52%; padding: 10px 12px; }
-  .routecard .rc-h { font-size: 15px; }
-  .routecard .rc-f { gap: 4px; margin: 6px 0 4px; }
-  .routecard .rc-f > div { padding: 3px 2px; }
-  .routecard .rc-f dt { font-size: 11px; }
-  .routecard .rc-f dd { font-size: 13px; }
-  .routecard .rc-more > summary { min-height: 40px; }
+  /* 경로 카드 = 낮은 띠: 시설 이름 + 거리 · 수용 · 위치 한 줄 글자(상자 없음), 표는 접힘(펼치면 카드 안에서 스크롤)
+     11/1 승우: 상자 3칸 + 머리글이 지도를 너무 가림 */
+  .routecard { bottom: 36px; max-height: 52%; padding: 6px 10px 2px; }
+  .routecard .rc-k { display: none; }
+  .routecard .rc-h { margin: 0; font-size: 15px; line-height: 1.35; }
+  .routecard .rc-x { margin: -8px -10px 0 4px; }
+  .routecard .rc-f { display: flex; flex-wrap: wrap; gap: 0 10px; margin: 2px 0 0; }
+  .routecard .rc-f > div { display: flex; align-items: baseline; gap: 3px; padding: 0; text-align: left; background: none; border: 0; }
+  .routecard .rc-f dt { font-size: 12px; }
+  .routecard .rc-f dd { margin: 0; font-size: 13px; }
+  .routecard .rc-w { margin: 4px 0 0; padding: 3px 6px; }
+  .routecard .rc-more > summary { min-height: 36px; padding: 2px 0; }
 }
 /* 3D 회전 버튼: 터치 화면에만(마우스는 오른쪽 끌기) */
 .rotbtn { display: none; padding: 7px 12px; font: 700 15px/1 var(--font); color: var(--ink); background: var(--panel); border: 1px solid var(--line-2); border-radius: 4px; cursor: pointer; }
