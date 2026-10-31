@@ -194,6 +194,12 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .routecard .rc-f > div { padding: 6px 4px; text-align: center; background: #F7F4EE; border: 1px solid var(--line); border-radius: 4px; }
 .routecard .rc-f dt { font-size: 12px; color: var(--ink-2); }
 .routecard .rc-f dd { margin: 2px 0 0; font-size: 15px; font-weight: 700; word-break: keep-all; }
+.routecard .rc-more > summary { display: flex; align-items: center; gap: 6px; padding: 4px 0 6px; font-size: 13px; font-weight: 700; color: var(--ink-2); cursor: pointer; }
+.routecard .rc-more > summary span { margin-left: auto; font-weight: 400; }
+.routecard .rc-more > summary::-webkit-details-marker { display: none; }
+.routecard .rc-more > summary::after { content: '▾'; margin-left: 2px; }
+.routecard .rc-more[open] > summary::after { content: '▴'; }
+.routecard .rc-more > summary b { margin-left: 4px; }
 .routecard .rc-w { margin: 0 0 8px; padding: 6px 8px; font-size: 13px; font-weight: 700; color: var(--crimson); background: var(--crimson-pale); border-radius: 4px; }
 .routecard th { padding: 5px 4px; font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; background: #F5F2EC; }
 .routecard td { padding: 5px 4px; text-align: center; border-top: 1px solid var(--line); }
@@ -416,7 +422,17 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .gucount { flex: 1 1 100%; }
   .gucount .gc { flex: 1; justify-content: center; padding: 4px 6px; gap: 4px; }
 }
-@media (max-width: 700px) { .kpi.wx { display: none; } }
+@media (max-width: 700px) {
+  .kpi.wx { display: none; }
+  /* 경로 카드 = 낮은 시트: 거리 · 수용 · 위치를 한 줄 작은 칸으로, 표는 접힘(펼치면 카드 안에서 스크롤) */
+  .routecard { max-height: 52%; padding: 10px 12px; }
+  .routecard .rc-h { font-size: 15px; }
+  .routecard .rc-f { gap: 4px; margin: 6px 0 4px; }
+  .routecard .rc-f > div { padding: 3px 2px; }
+  .routecard .rc-f dt { font-size: 11px; }
+  .routecard .rc-f dd { font-size: 13px; }
+  .routecard .rc-more > summary { min-height: 40px; }
+}
 /* 3D 회전 버튼: 터치 화면에만(마우스는 오른쪽 끌기) */
 .rotbtn { display: none; padding: 7px 12px; font: 700 15px/1 var(--font); color: var(--ink); background: var(--panel); border: 1px solid var(--line-2); border-radius: 4px; cursor: pointer; }
 .rotbtn[aria-pressed="true"] { color: #fff; background: var(--crimson); border-color: var(--crimson); }

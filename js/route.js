@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 잠긴 길(0.3 m 이상 = 인명 위해 수심)과 계단을 피해 가장 가까운 대피시설까지 걷는 길.
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=f987b66';
+import { BUILD_OP } from './map.js?v=d17bd09';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -87,6 +87,8 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
   async function solve(fit = false) {
     if (!start) return;
     const [x, y] = start, rain = getRain();
+    // 폰(≤700): 유형별 표는 접어 둠(펼치면 지도를 70 % 가림, 10/31 승우). 다시 그릴 때는 펼친 상태 유지
+    const more = card.querySelector('.rc-more'), moreOpen = more ? more.open : !matchMedia('(max-width: 700px)').matches;
     card.hidden = false; card.innerHTML = '<p class="rc-h">대피 경로 찾는 중…</p>';
     await ensure(x, y);
     const sv = shelters.features.map((f) => ({ f, n: nearest(...f.geometry.coordinates) })).filter((s) => s.n && s.n.d < 150);
@@ -121,11 +123,13 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     goal.setLngLat(f.geometry.coordinates).addTo(map);
     if (fit) { // 새 경로: 경로 전체가 보이게(오른쪽 아래 카드 자리는 비움)
       const xs = line.map((c) => c[0]), ys = line.map((c) => c[1]);
-      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: matchMedia('(max-width: 1180px)').matches ? { top: 40, left: 30, right: 30, bottom: Math.round(map.getContainer().clientHeight * 0.55) } : { top: 80, left: 60, right: 60, bottom: 260 }, pitch: 30, maxZoom: 17, duration: 1000 });
+      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: matchMedia('(max-width: 1180px)').matches ? { top: 40, left: 30, right: 30, bottom: Math.round(map.getContainer().clientHeight * (moreOpen ? 0.55 : 0.35)) } : { top: 80, left: 60, right: 60, bottom: 260 }, pitch: 30, maxZoom: 17, duration: 1000 });
     }
+    const n = { ok: 0, no: 0 };
     const rows = persona.map((pp, p) => {
       const min = m / SPEED[p] / 60, a = gi == null ? null : getAlert(gi, p);
       // 대피 가능 여부 = 꼬리표(대피 가능 · 대피 곤란 · 대피 불필요) + 인명 피해까지 남는/넘는 분
+      if (a?.toDanger != null) n[min <= a.toDanger ? 'ok' : 'no']++;
       const verdict = a?.toDanger == null ? '<span class="tag na">대피 불필요</span>'
         : min <= a.toDanger ? `<span class="tag ok">대피 가능</span><small>여유 ${Math.round(a.toDanger - min)}분</small>` : `<span class="tag no">대피 곤란</span><small>${Math.round(min - a.toDanger)}분 초과</small>`;
       return `<tr><td><span class="pn"><i class="chip" style="background:${pp.color}"></i>${pp.name}</span></td><td class="v">${Math.max(1, Math.round(min))}분</td><td><span class="vd">${verdict}</span></td></tr>`;
@@ -133,7 +137,8 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     const p = f.properties, cap = p.수용인원명 != null ? `${Math.round(p.수용인원명).toLocaleString('ko-KR')}명` : '–';
     card.innerHTML = `<button type="button" class="rc-x" aria-label="경로 지우기">✕</button><p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
       <dl class="rc-f"><div><dt>거리</dt><dd>${(m / 1000).toFixed(2)} km</dd></div><div><dt>수용 인원</dt><dd>${cap}</dd></div><div><dt>위치</dt><dd>${p.자치구} ${p.행정동}</dd></div></dl>
-      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다 · 높은 곳으로 먼저 이동하세요</p>' : ''}<table><thead><tr><th>시민 유형</th><th class="v">도보 시간</th><th>대피 가능 여부</th></tr></thead><tbody>${rows}</tbody></table>`;
+      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다 · 높은 곳으로 먼저 이동하세요</p>' : ''}<details class="rc-more"${moreOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
+      <table><thead><tr><th>시민 유형</th><th class="v">도보 시간</th><th>대피 가능 여부</th></tr></thead><tbody>${rows}</tbody></table></details>`;
   }
 
   // 경로를 보는 동안 3D 건물을 반투명하게(지형 위 선은 건물에 가려지므로)
