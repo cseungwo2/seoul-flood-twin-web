@@ -1,5 +1,5 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=e6510a5';
+import { addLandmarks3D } from './landmarks3d.js?v=3d6c347';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
@@ -285,7 +285,9 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   };
   const redrawZone = (ch) => { if (drawZone({ ...zoneState, ...ch })) { zsrc.play(); map.once('render', () => zsrc.pause()); } };
   map.on('zoomend', () => redrawZone({ rad: zoneRad() }));
-  map.addLayer({ id: 'persona-zone', type: 'raster', source: 'persona-zone', paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 11, 0, 11.6, 0.85, BUILD_Z, 0.85, BUILD_Z + 0.4, 0.45],
+  // 서울 전체(고른 구 없음) = 줌 11.6 부터 보임. 구를 고르면 그 구 칸만 그리므로 줌과 상관없이 보임(11/1: 폰은 구를 골라도 줌 10.9 라 안 보였음)
+  const ZONE_OP = (picked) => ['interpolate', ['linear'], ['zoom'], 11, picked ? 0.85 : 0, 11.6, 0.85, BUILD_Z, 0.85, BUILD_Z + 0.4, 0.45];
+  map.addLayer({ id: 'persona-zone', type: 'raster', source: 'persona-zone', paint: { 'raster-opacity': ZONE_OP(false),
     'raster-fade-duration': 0, 'raster-resampling': 'nearest' } }, firstSymbol);
 
   // 중앙선(OSM 도로 중심선): 큰길 = 노란 겹실선, 중간 길 = 노란 점선. 일방통행(상 · 하행이 따로 그려진 길)은 제외
@@ -348,14 +350,16 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   map.addSource('seoul-mask', { type: 'geojson', data: BASE + 'data/seoul_mask.geojson' });
   map.addLayer({ id: 'seoul-mask', type: 'fill', source: 'seoul-mask', paint: { 'fill-color': '#F2EEE7' } });
 
-  // 고른 구 띄우기: 구로 날아가 기울이고, 경계에 흰 빛 번짐(halo)만 살짝. 빨간 선 · 면 없음(11/1 승우: 클릭하면 너무 빨개짐)
-  // 폭은 줌에 비례(땅 기준 크기 고정) → 줌 아웃 · 폰에서 번짐이 구를 덮지 않음. 회색 구 경계선(gu-line)은 그 위에 그대로
+  // 고른 구 띄우기: 구로 날아가 기울이고, 경계 = 크림슨 실선 + 그 아래 흰 빛 번짐(halo). 구 안쪽 면은 칠하지 않음
+  // (11/1 승우: 면 · 안쪽 번짐은 구 전체가 빨개져 이상, halo 만은 구분이 안 감 → 선만 크림슨)
+  // 번짐 폭은 줌에 비례(땅 기준 크기 고정) → 줌 아웃 · 폰에서 번짐이 구를 덮지 않음
   const GLOW = {}, OFF = ['==', ['get', 'gi'], -1];
   const s = (px) => ['interpolate', ['exponential', 1.5], ['zoom'], 9, px / 3.4, 12, px, 15, px * 3.4]; // 줌당 1.5배(2배면 폰 줌에선 안 보임)
-  const glow = (id, op, paint) => { GLOW[id] = op;
+  const glow = (id, op, paint, before) => { GLOW[id] = op;
     map.addLayer({ id, type: 'line', source: 'gu', filter: OFF, layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#FFFFFF', 'line-opacity': 0, 'line-opacity-transition': { duration: 300 }, ...paint } }, 'gu-line'); };
-  glow('gu-halo', 1, { 'line-width': s(26), 'line-blur': s(18) });
+      paint: { 'line-opacity': 0, 'line-opacity-transition': { duration: 300 }, ...paint } }, before); };
+  glow('gu-halo', 1, { 'line-color': '#FFFFFF', 'line-width': s(26), 'line-blur': s(18) }, 'gu-line');
+  glow('gu-edge', 0.95, { 'line-color': '#8D0022', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.6, 12, 2.4, 15, 3] }, 'seoul-mask'); // 회색 구 경계선 위
   const home = { ...camera, bounds: undefined };
   const back = document.getElementById('mapback');
   const lift = (gi) => {
@@ -395,6 +399,7 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
       selected = gi;
       if (gi != null) map.setFeatureState({ source: 'gu', id: gi }, { selected: true });
       redrawZone({ only: gi }); // 예상 피해 지역 = 고른 구 칸만(없으면 서울 전체)
+      map.setPaintProperty('persona-zone', 'raster-opacity', ZONE_OP(gi != null));
       if (fly) lift(gi);
     },
   };
