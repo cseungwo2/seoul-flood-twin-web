@@ -121,7 +121,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     goal.setLngLat(f.geometry.coordinates).addTo(map);
     if (fit) { // 새 경로: 경로 전체가 보이게(오른쪽 아래 카드 자리는 비움)
       const xs = line.map((c) => c[0]), ys = line.map((c) => c[1]);
-      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: { top: 80, left: 60, right: 60, bottom: 260 }, pitch: 30, maxZoom: 17, duration: 1000 });
+      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: matchMedia('(max-width: 1180px)').matches ? { top: 40, left: 30, right: 30, bottom: Math.round(map.getContainer().clientHeight * 0.55) } : { top: 80, left: 60, right: 60, bottom: 260 }, pitch: 30, maxZoom: 17, duration: 1000 });
     }
     const rows = persona.map((pp, p) => {
       const min = m / SPEED[p] / 60, a = gi == null ? null : getAlert(gi, p);

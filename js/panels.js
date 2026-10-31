@@ -72,7 +72,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
   const pickLine = (li) => { if (!li) return; S.zone ^= 1 << +li.dataset.p; onChange(); };
   $('lines').addEventListener('click', (e) => pickLine(e.target.closest('li[data-p]')));
   $('lines').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickLine(e.target.closest('li[data-p]')); } });
-  const narrow = matchMedia('(max-width: 860px)').matches;
+  const narrow = matchMedia('(max-width: 1180px)').matches;
 
   // 슬라이더
   const rain = $('s-rain');

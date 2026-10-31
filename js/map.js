@@ -46,7 +46,8 @@ function restyle(style) {
 /** web/data 의 png → ImageData(색 보정 · 미리 곱하기 없이 원값 그대로). */
 async function pngData(name) {
   const bmp = await createImageBitmap(await (await fetch(BASE + 'data/' + name)).blob(), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
-  const c = new OffscreenCanvas(bmp.width, bmp.height), x = c.getContext('2d');
+  const c = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(bmp.width, bmp.height) : Object.assign(document.createElement('canvas'), { width: bmp.width, height: bmp.height }); // 구형 사파리(16.4 미만)
+  const x = c.getContext('2d');
   x.drawImage(bmp, 0, 0);
   return x.getImageData(0, 0, bmp.width, bmp.height);
 }
@@ -182,24 +183,42 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
     fetch(BASE + 'data/gu.geojson').then((r) => r.json()),
     fetch(BASE + 'data/shelters.geojson').then((r) => r.json()),
   ]);
-  const narrow = matchMedia('(max-width: 860px)').matches;
+  const narrow = matchMedia('(max-width: 1180px)').matches;
   const seoul = gu.features.map((f) => bboxOf(f.geometry)).reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);
-  // 휴대폰: 기울이지 않고 서울 경계에 맞춤(기울이면 지도 아래에 빈 띠가 생김)
-  const camera = narrow ? { bounds: seoul, fitBoundsOptions: { padding: 8 }, pitch: 0, bearing: 0 } : { center: [126.985, 37.556], zoom: 10.35, pitch: 38, bearing: -8 };
+  const PHONE = { padding: 8, pitch: 40, bearing: -8 }; // 휴대폰 · 태블릿: 서울 경계에 맞추되 3D 로 기울임
+  const camera = narrow ? { bounds: seoul, fitBoundsOptions: PHONE, pitch: PHONE.pitch, bearing: PHONE.bearing } : { center: [126.985, 37.556], zoom: 10.35, pitch: 38, bearing: -8 };
   const map = new maplibregl.Map({
     container, style: restyle(style), ...camera,
     maxBounds: [[126.55, 37.30], [127.40, 37.82]], minZoom: 9, maxPitch: 70,
     bearingDegreesPerPixelMoved: 0.35, pitchDegreesPerPixelMoved: -0.25, // 오른쪽 끌기 회전 · 기울기 감도(기본 0.8 · −0.5의 약 절반)
     localIdeographFontFamily: '"SeoulNamsan", "Malgun Gothic", sans-serif', attributionControl: { compact: true },
-    cooperativeGestures: narrow, preserveDrawingBuffer: new URLSearchParams(location.search).has('shot'),
-    locale: { 'CooperativeGesturesHandler.MobileHelpText': '지도는 두 손가락으로 움직입니다', 'CooperativeGesturesHandler.WindowsHelpText': 'Ctrl + 스크롤로 확대 · 축소', 'CooperativeGesturesHandler.MacHelpText': '⌘ + 스크롤로 확대 · 축소' },
+    preserveDrawingBuffer: new URLSearchParams(location.search).has('shot'),
   });
   if (view) map.jumpTo(view);
   map.scrollZoom.setWheelZoomRate(1 / 900); // 휠 확대 감도(기본 1/450의 절반)
   map.dragPan.enable({ linearity: 0.3, easing: (t) => 1 - (1 - t) ** 3, maxSpeed: 700, deceleration: 4000 }); // 왼쪽 끌기 뒤 미끄러짐 줄임(기본 1400 · 2500)
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+  // 터치 화면 3D 회전: 버튼 켜면 한 손가락 끌기 = 좌우 회전 · 위아래 기울기(데스크톱 오른쪽 끌기와 같은 감도), 끄면 이동
+  const rot = document.getElementById('rot-btn');
+  if (rot) {
+    let last = null;
+    rot.addEventListener('click', () => {
+      const on = rot.getAttribute('aria-pressed') !== 'true';
+      rot.setAttribute('aria-pressed', String(on));
+      on ? map.dragPan.disable() : map.dragPan.enable({ linearity: 0.3, easing: (t) => 1 - (1 - t) ** 3, maxSpeed: 700, deceleration: 4000 });
+    });
+    const cv = map.getCanvasContainer();
+    cv.addEventListener('touchstart', (e) => { last = rot.getAttribute('aria-pressed') === 'true' && e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, { passive: true });
+    cv.addEventListener('touchmove', (e) => {
+      if (!last || e.touches.length !== 1) { last = null; return; }
+      const [x, y] = [e.touches[0].clientX, e.touches[0].clientY];
+      map.jumpTo({ bearing: map.getBearing() + (x - last[0]) * 0.35, pitch: Math.max(0, Math.min(70, map.getPitch() - (y - last[1]) * 0.25)) });
+      last = [x, y];
+    }, { passive: true });
+    cv.addEventListener('touchend', () => { last = null; }, { passive: true });
+  }
   await new Promise((res) => map.on('load', res));
-  if (narrow) map.getContainer().querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
+  map.getContainer().querySelector('.maplibregl-compact-show')?.classList.remove('maplibregl-compact-show');
 
   // 지형(3D 높이 · 음영)은 없어도 되는 층 — 실패하면 평평한 지도로 계속
   try {
@@ -338,16 +357,18 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
     // 누르는 즉시 번짐을 새 구로 옮김(끄고 이동 뒤 다시 켜면 깜빡여 보임)
     for (const [id, op] of Object.entries(GLOW)) { map.setFilter(id, ['==', ['get', 'gi'], gi]); map.setPaintProperty(id, 'line-opacity', op); }
     const b = guBox.find((g) => g.gi === gi).b;
-    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 70, pitch: narrow ? 0 : 52, bearing: map.getBearing(), duration: 1200 });
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 70, pitch: narrow ? 50 : 52, bearing: map.getBearing(), duration: 1200 });
     back.hidden = false;
   };
   const unlift = () => {
     for (const id of Object.keys(GLOW)) map.setPaintProperty(id, 'line-opacity', 0);
-    if (narrow) map.fitBounds(seoul, { padding: 8, pitch: 0, bearing: 0 }); else map.flyTo({ ...home, duration: 1200 });
+    if (narrow) map.fitBounds(seoul, PHONE); else map.flyTo({ ...home, duration: 1200 });
     back.hidden = true;
     onSelect(null); // 서울 전체로 돌아가면 고른 구도 풂
   };
   back.addEventListener('click', unlift);
+  // 폴더블 접기/펴기 · 회전으로 지도 칸 크기가 바뀌면 서울 전체 보기를 다시 맞춤(구를 띄웠거나 경로 중이면 그대로)
+  if (narrow) map.on('resize', () => { if (back.hidden && !api.routeMode) map.fitBounds(seoul, { ...PHONE, duration: 0 }); });
   // 서울 밖(구가 없는 곳)을 누르면 서울 전체 보기로
   map.on('click', (e) => { if (!api.routeMode && !map.queryRenderedFeatures(e.point, { layers: ['gu-fill'] }).length) unlift(); });
 

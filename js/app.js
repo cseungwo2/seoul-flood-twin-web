@@ -54,6 +54,18 @@ for (const g of document.querySelectorAll('.gutter')) {
   });
 }
 
+// 좁은 화면 서랍: 한 번에 하나만 열림. 지도 위에 겹치므로 지도 크기는 그대로
+const setDrawer = (side) => {
+  for (const s of ['left', 'right']) document.querySelector(`.panel.${s}`).classList.toggle('open', s === side);
+  document.body.classList.toggle('drawer', side != null);
+  for (const b of document.querySelectorAll('[data-open]')) b.setAttribute('aria-expanded', String(b.dataset.open === side));
+};
+for (const b of document.querySelectorAll('[data-open]')) b.addEventListener('click', () => setDrawer(b.getAttribute('aria-expanded') === 'true' ? null : b.dataset.open));
+for (const x of document.querySelectorAll('.drawer-x, .scrim')) x.addEventListener('click', () => setDrawer(null));
+addEventListener('keydown', (e) => { if (e.key === 'Escape') setDrawer(null); });
+matchMedia('(max-width: 1180px)').addEventListener('change', () => setDrawer(null)); // 접기/펴기 · 회전으로 배치가 바뀌면 닫음
+matchMedia('(max-width: 599px)').addEventListener('change', () => setDrawer(null));
+
 let lastPaint = '', frame = 0, REC = [], route = null;
 function render() {
   frame = 0;
@@ -77,6 +89,7 @@ function render() {
 }
 function showSel() {
   panels.pick(sel == null);
+  document.getElementById('drawer-gu').textContent = sel == null ? '자치구 선택' : M.gn[sel]; // 오른쪽 서랍 버튼 = 고른 구 이름
   if (sel != null) { panels.gu(sel, A[sel]); panels.arsm(sel); }
 }
 function zoneLegend() {
@@ -107,7 +120,7 @@ try {
     document.getElementById('route-btn').addEventListener('click', syncMode);
   } catch (e) { console.info('대피 경로 없이 계속:', e.message); }
   render();
-  if (!matchMedia('(max-width: 860px)').matches) document.getElementById('legend').open = true; // 휴대폰은 접힌 채 시작
+  if (!matchMedia('(max-width: 1180px)').matches) document.getElementById('legend').open = true; // 휴대폰은 접힌 채 시작
 } catch (e) {
   console.info('지도 없이 계속:', e.message);
   document.getElementById('mapfail').hidden = false;

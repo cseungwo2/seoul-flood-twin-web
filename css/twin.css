@@ -19,6 +19,7 @@ body {
   background: var(--ground); color: var(--ink);
   font: 500 16px/1.5 var(--font); font-feature-settings: "tnum";
   display: grid; grid-template-rows: auto 1fr; overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); /* 아이폰 노치 · 홈 막대 */
   -webkit-font-smoothing: antialiased;
 }
 ::selection { background: var(--crimson); color: #fff; }
@@ -168,9 +169,10 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .mapbtns { position: absolute; top: 10px; right: 52px; z-index: 2; display: flex; gap: 6px; }
 .mapback { padding: 7px 12px; font: 700 15px/1 var(--font); color: var(--crimson); background: var(--panel); border: 1px solid var(--crimson); border-radius: 4px; cursor: pointer; }
 .mapback[hidden], .routebtn[hidden], .routecard[hidden] { display: none; }
+.routecard:not([hidden]) ~ .legend { display: none; } /* 경로 카드가 떠 있는 동안 범례 숨김(겹침 방지) */
 .routebtn { padding: 7px 12px; font: 700 15px/1 var(--font); color: #fff; background: #2E7D4F; border: 0; border-radius: 4px; cursor: pointer; }
 .routebtn[aria-pressed="true"] { background: var(--ink); }
-.routecard { position: absolute; right: 10px; bottom: 34px; z-index: 2; width: min(430px, calc(100% - 20px)); max-height: 70%; overflow-y: auto; padding: 12px 14px; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid #2E7D4F; border-radius: 4px; }
+.routecard { position: absolute; right: 10px; bottom: 40px; z-index: 2; width: min(430px, calc(100% - 20px)); max-height: 70%; overflow-y: auto; padding: 12px 14px; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid #2E7D4F; border-radius: 4px; }
 .routecard .rc-x { float: right; margin: -4px -4px 0 8px; width: 26px; height: 26px; border: 0; background: none; color: var(--ink-2); font-size: 16px; cursor: pointer; }
 .routecard .rc-x:hover { color: var(--crimson); }
 .askpop .maplibregl-popup-content p { margin: 0 0 8px; font-size: 15px; }
@@ -184,6 +186,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .navtag.to { background: #2E7D4F; border-color: #2E7D4F; }
 .routecard .rc-s { margin: 4px 0; color: var(--ink-2); }
 .routecard table { border-collapse: collapse; width: 100%; }
+.routecard th, .routecard td { word-break: keep-all; } /* 좁은 카드: 낱말 중간에서 줄바꿈 안 함 */
 /* 거리 · 수용 · 위치: 이름표(회색) 위, 값(굵게) 아래 */
 /* 대피 경로 카드: 제목 · 정보 칸 3개(가운데 정렬 네모) · 표 */
 .routecard .rc-k { margin: 0; font-size: 12px; font-weight: 700; color: #2E7D4F; }
@@ -294,47 +297,127 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 
 /* ---------- 아래 ---------- */
 
-/* ---------- 노트북 좁은 폭 ---------- */
+/* ---------- 서랍(≤1180 에서만 보임): 여는 버튼 · 닫기 · 어두운 바탕 ---------- */
+.drawers, .drawer-x, .scrim { display: none; }
+
+/* ---------- 태블릿 · 폴더블 · 휴대폰(≤1180): 지도가 주인공. 오른쪽 패널은 지도 옆, 왼쪽 패널(강우 · 대응 자원 · 상황 알림)은 왼쪽 서랍 ---------- */
 @media (max-width: 1180px) {
-  .grid { --lw: 264px; --rw: 360px; }
-  .kpi > div { min-width: 0; padding: 6px 12px; }
+  body { height: 100vh; height: 100dvh; } /* 페이지는 스크롤하지 않음: 지도 + 패널 안에서만 스크롤 */
+  .top { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
+  .kpi > div { min-width: 0; padding: 0 0 6px; }
+  .kpi dt { padding: 4px 6px; font-size: 15px; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; }
+  .kpi dd { padding: 0 6px; flex-wrap: wrap; }
+  .kpi dd b { font-size: 30px; }
+  .kpi.wx { flex: 1 1 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; }
+  .gutter { display: none; }
+  .grid { --rw: clamp(280px, 42vw, 360px); grid-template-columns: minmax(0, 1fr) var(--rw); padding: 0 10px 10px; gap: 10px; }
+  .grid > .mapwrap { grid-column: 1; grid-row: 1; }
+  .grid > .panel.right { grid-column: 2; grid-row: 1; container-type: inline-size; }
+  .chartbox { height: 260px; }
+  .legend { width: auto; max-width: calc(100% - 20px); }
+  .legend[open] { width: min(290px, calc(100% - 20px)); max-height: calc(100% - 20px); overflow-y: auto; }
+  /* 대피 경로 카드 = 지도 아래쪽 시트(전체 폭), 위쪽 = 지도 버튼 자리 비움 */
+  .routecard { left: 8px; right: 8px; bottom: 44px; width: auto; max-height: calc(100% - 196px); }
+
+  /* 서랍 여는 버튼 = 왼쪽 카드 제목 띠('강우')와 같은 진한 띠 · 오른쪽 = 고른 구 이름 */
+  .drawers { display: flex; gap: 6px; }
+  .drawers button { min-width: 44px; min-height: 44px; padding: 0 14px; font: 700 17px/1.2 var(--font); color: #fff; background: #3A3632; border: 0; border-radius: 4px; cursor: pointer; word-break: keep-all; }
+  .drawers button[aria-expanded="true"] { background: var(--crimson); }
+  .drawers [data-open="right"] { display: none; } /* 넓은 화면: 오른쪽 패널은 늘 지도 옆 */
+  /* 서랍: 지도 위에 겹쳐 미끄러져 나옴(지도 크기는 그대로) */
+  .panel.left {
+    position: fixed; top: 0; bottom: 0; z-index: 60; width: min(85vw, 380px); overflow-y: auto; overscroll-behavior: contain;
+    padding: calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom));
+    background: var(--ground); border: 0; border-radius: 0; box-shadow: 0 0 24px rgba(38, 38, 38, 0.25);
+    visibility: hidden; transition: transform 220ms ease-out, visibility 0s linear 220ms;
+  }
+  .panel.left { left: 0; padding-left: calc(10px + env(safe-area-inset-left)); transform: translateX(-100%); }
+  .panel.open { visibility: visible; transform: none; transition: transform 220ms ease-out; }
+  .drawer-x { display: block; flex: none; align-self: flex-end; width: 44px; height: 44px; margin: -4px -4px 0 0; padding: 0; font: 700 20px/1 var(--font); color: var(--ink-2); background: none; border: 0; cursor: pointer; }
+  .panel.right > .drawer-x { display: none; }
+  body.drawer .scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(38, 38, 38, 0.35); }
 }
 
-/* ---------- 휴대폰 · 태블릿: 지도 위, 나머지 아래로 쌓기 ---------- */
-@media (max-width: 860px) {
-  body { display: block; overflow: auto; height: auto; }
-  .top { flex-direction: column; align-items: stretch; gap: 10px; }
-  h1 { font-size: 20px; }
-  .kpi { display: grid; grid-template-columns: 1fr 1fr; }
-  .kpi > div { padding: 6px 12px; }
-  .kpi > div + div { border-left: 0; }
-  .kpi > div:nth-child(even) { border-left: 1px solid var(--line); }
-  .kpi > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+/* ---------- 휴대폰(<600, iPhone Duo 접음 466 포함): 지도 화면 가득, 오른쪽 패널도 오른쪽 서랍 ---------- */
+@media (max-width: 599px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .panel.right { position: fixed; top: 0; bottom: 0; right: 0; z-index: 60; width: min(85vw, 380px); overflow-y: auto; overscroll-behavior: contain;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); padding-right: env(safe-area-inset-right);
+    border: 0; border-radius: 0; box-shadow: 0 0 24px rgba(38, 38, 38, 0.25);
+    visibility: hidden; transform: translateX(100%); transition: transform 220ms ease-out, visibility 0s linear 220ms; }
+  .panel.right.open { visibility: visible; transform: none; transition: transform 220ms ease-out; }
+  .panel.right > .drawer-x { display: block; margin: 4px 4px -8px auto; }
+  .drawers { flex: 1 1 100%; order: 2; }
+  .drawers button, .drawers [data-open="right"] { display: block; flex: 1 1 0; min-width: 0; }
+  .kpi.wx { display: none; } /* 휴대폰은 날씨 칸 숨김(지도 자리) */
+  .kpi dt { font-size: 13px; padding: 3px 4px; }
+  .kpi dd { padding: 0 4px; gap: 2px; }
   .kpi dd b { font-size: 22px; }
-  .grid { display: flex; flex-direction: column; gap: 10px; }
-  .panel { display: contents; }
-  .gutter { display: none; }
-  .mapwrap { order: 0; height: 55vh; height: 55svh; min-height: 320px; } /* svh: 주소창이 접혔다 펴져도 지도 높이 고정 */
-  .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
-  .sec + .sec { border-top: 1px solid var(--line); }
-  .sec > summary { margin-bottom: 0; min-height: 28px; }
-  .sec[open] > summary { margin-bottom: 8px; }
-  .sec-rain { order: 1; }
-  .guhead { order: 2; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; }
-  .sec-say { order: 3; }
-  .sec-judge { order: 4; }
-  #res { display: contents; } /* 휴대폰: 자원 칸을 세로 순서에 섞음 */
-  .grp, .sec-res { order: 5; }
-  .chartbox { height: 260px; }
-  .grp { background: none; border: 0; padding: 4px 2px 0; }
-  .sec-arsm { order: 6; }
-  .legend { font-size: 13px; padding: 4px 8px; max-width: calc(100% - 20px); }
-  .legend > summary { display: block; cursor: pointer; font-weight: 700; min-height: 24px; line-height: 24px; }
-  .legend[open] > summary { margin-bottom: 4px; }
-  .quick button { min-height: 44px; }
-  input[type="range"] { height: 32px; }
+  .kpi dd span { font-size: 13px; }
+}
+/* 아주 좁은 휴대폰(<400): 요약 숫자 2×2 */
+@media (max-width: 399px) {
+  .kpi { display: grid; grid-template-columns: 1fr 1fr; }
+  .kpi > div:nth-child(3) { border-left: 0; }
+  .kpi > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .kpi dt { font-size: 14px; }
+  .kpi dd b { font-size: 24px; }
+}
+
+/* 가로로 눕힌 휴대폰(낮은 화면): 요약 칸 한 줄로 납작하게, 날씨 숨김 → 지도 자리 확보 */
+@media (max-width: 1180px) and (max-height: 540px) and (orientation: landscape) {
+  .top { flex-wrap: nowrap; padding-top: 6px; padding-bottom: 6px; }
+  .kpi.wx { display: none; }
+  .kpi dt { padding: 2px 6px; font-size: 13px; }
+  .kpi dd { margin-top: 2px; }
+  .kpi dd b { font-size: 22px; }
+  .kpi > div { padding-bottom: 2px; }
+}
+
+/* 터치 화면: 누르는 칸 44 px 이상 */
+@media (max-width: 1180px), (pointer: coarse) {
+  .sec > summary, .legend > summary { min-height: 44px; }
+  .legend > summary { display: flex; align-items: center; min-width: 44px; }
+  input[type="range"] { height: 44px; }
+  .quick button, .wx button, .mapbtns button, .askpop .ask-b button, .guhead select, .alg button, .sit-list > li, .lines li[data-p] { min-height: 44px; }
+  .tog { width: 64px; height: 44px; margin: 0 0 0 auto; border: 8px solid transparent; border-radius: 22px; background-clip: padding-box; }
+  .tog::after { top: 3px; left: 3px; width: 22px; height: 22px; }
+  .sec-res > summary { gap: 8px; } .sec-res > summary > span { min-width: 0; }
+  .tog:checked::after { transform: translateX(20px); }
+  .routecard .rc-x { width: 44px; height: 44px; margin: -12px -12px 0 4px; }
+  .maplibregl-ctrl-group button { width: 44px; height: 44px; }
+  .mapbtns { right: 64px; }
+  /* 패널 접기(태블릿 가로 = 데스크톱 배치): 44 px, 지도 가장자리 가운데로(지도 버튼과 안 겹치게) */
+  .fold { width: 44px; height: 44px; top: calc(50% - 22px); left: -6px; }
+  .gutter[data-side="right"] .fold { left: auto; right: -6px; }
+}
+
+/* 좁은 오른쪽 패널(휴대폰 · 두 칸 태블릿): 경보 표 5칸을 줄이고, 머리줄 · 판정 · 수용은 두 줄 허용(잘라내지 않음) */
+@container (max-width: 420px) {
+  .lines li { grid-template-columns: 44px minmax(0, 1.3fr) 54px 58px minmax(0, 1fr); font-size: 14px; }
+  .lines li > * { padding: 6px 3px; }
+  .lines li.lh > * { white-space: normal; word-break: keep-all; line-height: 1.25; padding: 6px 2px; }
+  .lines .nm > span { overflow-wrap: anywhere; }
+  .lines .st { font-size: 13px; white-space: normal; word-break: keep-all; }
+  .lines .when { font-size: 15px; }
+  .lines .ppl b { font-size: 15px; }
+  .lines .ppl .n { flex-wrap: wrap; }
+  .lines .ppl .acc { white-space: normal; word-break: keep-all; text-align: center; }
+  .alg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* 10/31 비율 다듬기: 폴더블 펼침(≤700)은 날씨 줄 숨겨 지도 자리 확보, 구 판정 칸 글자 안 쪼개지게 */
+.gucount em { white-space: nowrap; }
+@media (max-width: 1180px) {
+  .gucount { flex: 1 1 100%; }
+  .gucount .gc { flex: 1; justify-content: center; padding: 4px 6px; gap: 4px; }
+}
+@media (max-width: 700px) { .kpi.wx { display: none; } }
+/* 3D 회전 버튼: 터치 화면에만(마우스는 오른쪽 끌기) */
+.rotbtn { display: none; padding: 7px 12px; font: 700 15px/1 var(--font); color: var(--ink); background: var(--panel); border: 1px solid var(--line-2); border-radius: 4px; cursor: pointer; }
+.rotbtn[aria-pressed="true"] { color: #fff; background: var(--crimson); border-color: var(--crimson); }
+@media (pointer: coarse) { .rotbtn { display: block; } }

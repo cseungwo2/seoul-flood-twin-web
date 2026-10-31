@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>REDI Twin</title>
 <meta name="theme-color" content="#F2EEE7">
 <link rel="icon" type="image/png" href="icon.png"><!-- 고려대 호랑이(문장에서 호랑이만, 크림슨) -->
@@ -15,6 +15,10 @@
 <body>
 <header class="top">
   <h1 class="sr">서울 침수 안전 마진 디지털 트윈</h1>
+  <div class="drawers"><!-- 좁은 화면: 패널을 서랍으로 꺼냄(글자는 패널 제목 그대로) -->
+    <button type="button" data-open="left" aria-controls="p-left" aria-expanded="false">강우</button>
+    <button type="button" data-open="right" aria-controls="p-right" aria-expanded="false" id="drawer-gu">자치구 선택</button>
+  </div>
   <dl class="kpi" aria-live="polite">
     <div><dt>대피 필요 자치구</dt><dd><b id="k-alert">0</b><span>개 구</span></dd></div>
     <div><dt>즉시 대피 자치구</dt><dd><b id="k-late">0</b><span>개 구</span></dd></div>
@@ -30,7 +34,8 @@
 </header>
 
 <main class="grid">
-  <aside class="panel left" aria-label="조건">
+  <aside class="panel left" id="p-left" aria-label="조건">
+    <button type="button" class="drawer-x" aria-label="닫기">✕</button>
     <details class="sec sec-rain" open>
       <summary>강우</summary>
       <div class="rain-read"><output id="o-rain" for="s-rain">0</output><span>mm/h</span></div>
@@ -55,6 +60,7 @@
     <div class="mapbtns"><!-- 지도 버튼은 오른쪽 위에 모음 -->
       <button type="button" class="mapback" id="mapback" hidden>서울 전체</button>
       <button type="button" class="routebtn" id="route-btn" aria-pressed="false" hidden>대피 경로</button>
+      <button type="button" class="rotbtn" id="rot-btn" aria-pressed="false">3D 회전</button><!-- 터치 화면: 켜면 한 손가락 끌기 = 회전 · 기울기(컴퓨터 오른쪽 끌기와 같음) -->
     </div>
     <div class="routecard" id="route-card" hidden aria-live="polite"></div>
     <p class="mapfail" id="mapfail" hidden>지도를 불러오지 못했습니다 — 계산 결과는 그대로 볼 수 있습니다</p>
@@ -74,7 +80,8 @@
   </section>
   <div class="gutter" data-side="right" role="separator" aria-orientation="vertical" aria-label="오른쪽 패널 폭" tabindex="0"><button type="button" class="fold" aria-label="오른쪽 패널 접기">›</button></div>
 
-  <aside class="panel right" aria-label="선택 구">
+  <aside class="panel right" id="p-right" aria-label="선택 구">
+    <button type="button" class="drawer-x" aria-label="닫기">✕</button>
     <div class="guhead">
       <label for="s-gu" class="sr">자치구 선택</label>
       <select id="s-gu"></select>
@@ -94,6 +101,7 @@
   </aside>
 </main>
 
+<div class="scrim" aria-hidden="true"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script type="module" src="js/app.js"></script>
 </body>
