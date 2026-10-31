@@ -1,5 +1,5 @@
 // 패널: 왼쪽 슬라이더 · 위 지표 줄 · 오른쪽 선택 구(경보 문장 + 위험 인원 막대 · ARSM 곡선).
-import { sentence, demand, arsmCurve, lifeShown, volunteerPlan, capacity } from './model.js';
+import { sentence, demand, arsmCurve, lifeShown, volunteerPlan, capacity } from './model.js?v=f987b66';
 
 export const RES = [
   { k: 'shelter', f: 'shelter_cap', name: '대피시설 수용 인원', short: '대피시설', unit: '명' },
