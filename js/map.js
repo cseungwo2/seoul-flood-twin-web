@@ -1,5 +1,5 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=9bb3c60';
+import { addLandmarks3D } from './landmarks3d.js?v=e6510a5';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
@@ -315,8 +315,13 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
     'fill-extrusion-color': buildColor(0, null, colors),
     'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': BUILD_OP,
     'fill-extrusion-vertical-gradient': true } }, map.getLayer('landmark-parts') ? 'landmark-parts' : undefined);
-  map.on('click', 'buildings', (e) => api.onBuilding?.(e.lngLat)); // 건물 클릭 → 대피 경로 안내 묻기
-  map.on('mouseenter', 'buildings', () => { map.getCanvas().style.cursor = 'pointer'; });
+  // 특이 건물 자리엔 일반 건물이 빠져 있음(build_assets: 랜드마크 바닥과 50 % 넘게 겹치면 제외) → 특이 건물도 클릭되게.
+  // 손 모형(three.js)은 클릭을 못 받으므로 같은 자리에 안 보이는 단 쌓기(landmark-hit)를 깔아 받음
+  if (map.getLayer('landmark-parts')) map.addLayer({ id: 'landmark-hit', type: 'fill-extrusion', source: 'landmark-parts', filter: ['has', 'hand'], minzoom: BUILD_Z,
+    paint: { 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': ['get', 'min_h'], 'fill-extrusion-opacity': 0 } });
+  const HIT = ['buildings', 'landmark-parts', 'landmark-hit'].filter((id) => map.getLayer(id));
+  map.on('click', (e) => { if (map.getZoom() >= BUILD_Z && map.queryRenderedFeatures(e.point, { layers: HIT }).length) api.onBuilding?.(e.lngLat); }); // 건물 클릭 → 대피 경로 안내 묻기
+  for (const id of HIT) map.on('mouseenter', id, () => { map.getCanvas().style.cursor = 'pointer'; });
   const lgShelter = document.getElementById('lg-shelter'); // 점이 보이는 줌(≥ 11)에서만 범례에
   const shelterLegend = () => { lgShelter.hidden = map.getZoom() < 11; };
   map.on('zoomend', shelterLegend); shelterLegend();
