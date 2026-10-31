@@ -1,5 +1,5 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=d17bd09';
+import { addLandmarks3D } from './landmarks3d.js?v=9bb3c60';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
@@ -343,28 +343,25 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   map.addSource('seoul-mask', { type: 'geojson', data: BASE + 'data/seoul_mask.geojson' });
   map.addLayer({ id: 'seoul-mask', type: 'fill', source: 'seoul-mask', paint: { 'fill-color': '#F2EEE7' } });
 
-  // 고른 구 띄우기: 구로 날아가 기울이고, 또렷한 크림슨 선 + 안쪽 얇은 번짐 + 아주 옅은 면. 다른 구는 흐리게 하지 않음(10/31)
-  // 10/31 승우: 예전 3겹 번짐(고정 30 px)은 모서리가 지저분하고, 줌 아웃 · 폰(구가 화면에 작음)에선 구 전체가 빨갛게 덮임
-  // → 번짐 1겹 · 폭을 줌에 비례(땅 기준 크기 고정)시켜 구가 작게 보이면 번짐도 같이 좁아짐. z = 줌 12 에서의 px
+  // 고른 구 띄우기: 구로 날아가 기울이고, 경계에 흰 빛 번짐(halo)만 살짝. 빨간 선 · 면 없음(11/1 승우: 클릭하면 너무 빨개짐)
+  // 폭은 줌에 비례(땅 기준 크기 고정) → 줌 아웃 · 폰에서 번짐이 구를 덮지 않음. 회색 구 경계선(gu-line)은 그 위에 그대로
   const GLOW = {}, OFF = ['==', ['get', 'gi'], -1];
-  const s = (px) => ['interpolate', ['exponential', 2], ['zoom'], 9, px / 8, 12, px, 15, px * 4];
-  const glow = (id, type, op, paint, before) => { GLOW[id] = [type, op];
-    map.addLayer({ id, type, source: 'gu', filter: OFF, ...(type === 'line' && { layout: { 'line-join': 'round', 'line-cap': 'round' } }),
-      paint: { [`${type}-color`]: '#8D0022', [`${type}-opacity`]: 0, [`${type}-opacity-transition`]: { duration: 300 }, ...paint } }, before); };
-  glow('gu-tint', 'fill', 0.05, {}, 'gu-line'); // 면은 건물 아래
-  glow('gu-glow', 'line', 0.25, { 'line-width': s(8), 'line-blur': s(6), 'line-offset': s(4) }, 'seoul-mask');
-  glow('gu-edge', 'line', 0.9, { 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.2, 12, 2, 15, 2.6] }, 'seoul-mask');
+  const s = (px) => ['interpolate', ['exponential', 1.5], ['zoom'], 9, px / 3.4, 12, px, 15, px * 3.4]; // 줌당 1.5배(2배면 폰 줌에선 안 보임)
+  const glow = (id, op, paint) => { GLOW[id] = op;
+    map.addLayer({ id, type: 'line', source: 'gu', filter: OFF, layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#FFFFFF', 'line-opacity': 0, 'line-opacity-transition': { duration: 300 }, ...paint } }, 'gu-line'); };
+  glow('gu-halo', 1, { 'line-width': s(26), 'line-blur': s(18) });
   const home = { ...camera, bounds: undefined };
   const back = document.getElementById('mapback');
   const lift = (gi) => {
     // 누르는 즉시 번짐을 새 구로 옮김(끄고 이동 뒤 다시 켜면 깜빡여 보임)
-    for (const [id, [type, op]] of Object.entries(GLOW)) { map.setFilter(id, ['==', ['get', 'gi'], gi]); map.setPaintProperty(id, `${type}-opacity`, op); }
+    for (const [id, op] of Object.entries(GLOW)) { map.setFilter(id, ['==', ['get', 'gi'], gi]); map.setPaintProperty(id, 'line-opacity', op); }
     const b = guBox.find((g) => g.gi === gi).b;
     map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 70, pitch: narrow ? 50 : 52, bearing: map.getBearing(), duration: 1200 });
     back.hidden = false;
   };
   const unlift = () => {
-    for (const [id, [type]] of Object.entries(GLOW)) map.setPaintProperty(id, `${type}-opacity`, 0);
+    for (const id of Object.keys(GLOW)) map.setPaintProperty(id, 'line-opacity', 0);
     if (narrow) map.fitBounds(seoul, PHONE); else map.flyTo({ ...home, duration: 1200 });
     back.hidden = true;
     onSelect(null); // 서울 전체로 돌아가면 고른 구도 풂

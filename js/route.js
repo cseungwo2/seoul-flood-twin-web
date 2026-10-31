@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 잠긴 길(0.3 m 이상 = 인명 위해 수심)과 계단을 피해 가장 가까운 대피시설까지 걷는 길.
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=d17bd09';
+import { BUILD_OP } from './map.js?v=9bb3c60';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -137,7 +137,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     const p = f.properties, cap = p.수용인원명 != null ? `${Math.round(p.수용인원명).toLocaleString('ko-KR')}명` : '–';
     card.innerHTML = `<button type="button" class="rc-x" aria-label="경로 지우기">✕</button><p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
       <dl class="rc-f"><div><dt>거리</dt><dd>${(m / 1000).toFixed(2)} km</dd></div><div><dt>수용 인원</dt><dd>${cap}</dd></div><div><dt>위치</dt><dd>${p.자치구} ${p.행정동}</dd></div></dl>
-      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다 · 높은 곳으로 먼저 이동하세요</p>' : ''}<details class="rc-more"${moreOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
+      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다</p>' : ''}<details class="rc-more"${moreOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
       <table><thead><tr><th>시민 유형</th><th class="v">도보 시간</th><th>대피 가능 여부</th></tr></thead><tbody>${rows}</tbody></table></details>`;
   }
 
