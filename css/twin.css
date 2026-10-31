@@ -48,6 +48,8 @@ h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 700; letter-spac
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 /* 폰: 서랍(z 60)보다 위, 화면 아래 가운데(스위치를 누른 손가락 근처 · 서랍 글자 안 가림). 11/1 Duo 접힘에서 서랍에 가려 안 보였음 */
 @media (max-width: 700px) { .toast { top: auto; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translate(-50%, 8px); text-align: center; } }
+/* left 50 % 로 띄우면 폭이 화면 절반으로 줄어 짧은 알림도 두 줄이 됨 → 글자 폭만큼(한 줄), 화면보다 길 때만 줄바꿈 */
+.toast { width: max-content; }
 /* 자원 켜기 스위치 */
 .tog { appearance: none; margin: 0 8px 0 auto; width: 34px; height: 20px; border-radius: 10px; background: var(--line-2); position: relative; cursor: pointer; flex: none; transition: background-color 150ms ease-out; }
 .tog::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 150ms ease-out; }
@@ -205,6 +207,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .routecard .rc-w { margin: 0 0 8px; text-align: center; padding: 6px 8px; font-size: 13px; font-weight: 700; color: var(--crimson); background: var(--crimson-pale); border-radius: 4px; }
 .routecard th { padding: 5px 4px; font-size: 12px; font-weight: 700; color: var(--ink-2); text-align: center; background: #F5F2EC; }
 .routecard td { padding: 5px 4px; text-align: center; border-top: 1px solid var(--line); }
+.routecard th + th, .routecard td + td { border-left: 1px solid var(--line); } /* 대피 경보 표처럼 칸마다 세로 구분선 */
 .routecard .pn { display: inline-flex; align-items: center; gap: 6px; }
 .routecard td.v { font-weight: 700; }
 .routecard .vd { display: inline-flex; align-items: center; gap: 6px; }

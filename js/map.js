@@ -1,5 +1,5 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=6710da0';
+import { addLandmarks3D } from './landmarks3d.js?v=9a6b356';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
@@ -321,7 +321,20 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   // 손 모형(three.js)은 클릭을 못 받으므로 같은 자리에 안 보이는 단 쌓기(landmark-hit)를 깔아 받음
   if (map.getLayer('landmark-parts')) map.addLayer({ id: 'landmark-hit', type: 'fill-extrusion', source: 'landmark-parts', filter: ['has', 'hand'], minzoom: BUILD_Z,
     paint: { 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': ['get', 'min_h'], 'fill-extrusion-opacity': 0 } });
-  const HIT = ['buildings', 'landmark-parts', 'landmark-hit'].filter((id) => map.getLayer(id));
+  // 고려대 캠퍼스 바닥(prep/campus_ku.py ground): 잔디 · 숲 · 운동장 · 트랙 · 주차장 · 연못 = 항공사진 색, 보행로 · 계단 = 포장 선(땅 폭 m). 도로 · 침수 수심 아래
+  map.addSource('campus-ground', { type: 'geojson', data: BASE + 'data/campus_ku_ground.geojson' });
+  const groundM = (m) => ['interpolate', ['exponential', 2], ['zoom'], 13, ['*', m, 0.05], 18, ['*', m, 1.6]]; // m → px(위도 37.6° 근사)
+  map.addLayer({ id: 'campus-ground', type: 'fill', source: 'campus-ground', minzoom: 13, filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.92 } }, 'roads-line');
+  map.addLayer({ id: 'campus-walk', type: 'line', source: 'campus-ground', minzoom: 14, filter: ['==', ['geometry-type'], 'LineString'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': ['match', ['get', 'kind'], 'steps', '#BDB5A6', '#E2DCCF'], 'line-width': groundM(['get', 'w']),
+      'line-dasharray': ['match', ['get', 'kind'], 'steps', ['literal', [0.4, 0.25]], ['literal', [1, 0]]] } }, 'roads-line');
+  // 고려대 안암 캠퍼스 정밀 모형(prep/campus_ku.py): 실제 바닥 · 층수 높이 · 외벽 재질 색 + 항공사진 지붕 색(벽 · 지붕 판 2조각). 그 자리 일반 건물은 타일에서 뺌
+  map.addSource('campus', { type: 'geojson', data: BASE + 'data/campus_ku.geojson' });
+  map.addLayer({ id: 'campus', type: 'fill-extrusion', source: 'campus', minzoom: BUILD_Z, paint: {
+    'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-base': ['get', 'min_h'], 'fill-extrusion-opacity': 1 } });
+  const HIT = ['buildings', 'landmark-parts', 'landmark-hit', 'campus'].filter((id) => map.getLayer(id));
   map.on('click', (e) => { if (map.getZoom() >= BUILD_Z && map.queryRenderedFeatures(e.point, { layers: HIT }).length) api.onBuilding?.(e.lngLat); }); // 건물 클릭 → 대피 경로 안내 묻기
   for (const id of HIT) map.on('mouseenter', id, () => { map.getCanvas().style.cursor = 'pointer'; });
   const lgShelter = document.getElementById('lg-shelter'); // 점이 보이는 줌(≥ 11)에서만 범례에
