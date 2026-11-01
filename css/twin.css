@@ -284,7 +284,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .lines .when { font-weight: 700; font-size: 17px; }
 .lines li.late .when { color: var(--crimson); }
 .lines .ppl { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 5px; }
-.lines .ppl .n { display: flex; justify-content: center; align-items: baseline; gap: 2px; }
+.lines .ppl .n { display: flex; justify-content: center; align-items: baseline; gap: 2px; white-space: nowrap; }
 .lines .ppl small { font-size: 13px; color: var(--ink-2); }
 .lines .ppl .acc { font-size: 12px; font-weight: 700; color: #2E7D4F; white-space: nowrap; }
 .lines .ppl .acc.need { color: var(--crimson); white-space: normal; word-break: keep-all; line-height: 1.2; } /* 재해취약자: 지원 인력 모자람 — 좁으면 두 줄(칸 밖으로 안 나가게) */ /* 대피시설 수용 인원 */
@@ -424,7 +424,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .lines li.lh > * { white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.25; padding: 6px 2px; }
   .lines .when { font-size: 1em; }
   .lines .ppl b { font-size: 1em; }
-  .lines .ppl .n { flex-wrap: wrap; }
+  .lines .ppl .n { flex-wrap: nowrap; white-space: nowrap; } /* 1만 명 넘어도 '명' 이 줄바꿈 안 되게(11/2 승우) */
   .lines .ppl .acc { white-space: normal; word-break: keep-all; text-align: center; }
   .alg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -439,9 +439,9 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .gucount { flex: 1 1 100%; }
   .gucount .gc { flex: 1; justify-content: center; padding: 4px 6px; gap: 4px; }
 }
-@media (max-width: 700px) {
+@media (max-width: 1180px) {
   /* 경로 카드 = 낮은 띠: 시설 이름 + 거리 · 수용 · 위치 한 줄 글자(상자 없음), 표는 접힘(펼치면 카드 안에서 스크롤)
-     11/1 승우: 상자 3칸 + 머리글이 지도를 너무 가림 */
+     11/1 승우: 상자 3칸 + 머리글이 지도를 너무 가림 / 11/2: 아이패드 · 태블릿(≤1180)도 같게(지도 절반 넘게 가림) */
   .routecard { bottom: 36px; max-height: 34%; padding: 4px 10px 2px; font-size: 13px; }
   .routecard .rc-k { display: none; }
   .routecard .rc-h { margin: 0; font-size: 15px; line-height: 1.35; }
@@ -501,3 +501,5 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .askpop .ask-b { gap: 4px; }
   .askpop .ask-b button { min-height: 26px; padding: 0; font-size: 11px; }
 }
+/* 경로 카드 전체 크기 축소(11/2 승우: 지도를 너무 가림, 내용은 그대로) — 글자 · 칸 · 여백을 같은 비율로(글자는 선명) */
+.routecard { zoom: 0.8; }

@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 계단을 피해 가장 가까운 대피시설까지 걷는 길(침수 수심과 무관, 11/2 승우).
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=3221977';
+import { BUILD_OP } from './map.js?v=815011b';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -97,7 +97,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     if (!start) return;
     const [x, y] = start, rain = getRain();
     // 폰(≤700): 유형별 표는 접어 둠(펼치면 지도를 70 % 가림, 10/31 승우). 다시 그릴 때는 펼친 상태 유지
-    const more = card.querySelector('.rc-more'), moreOpen = more ? more.open : !matchMedia('(max-width: 700px)').matches;
+    const more = card.querySelector('.rc-more'), moreOpen = more ? more.open : !matchMedia('(max-width: 1180px)').matches; // 폰 · 태블릿은 표 접고 시작
     card.hidden = false; card.classList.toggle('mini', mini); card.classList.remove('rc-none'); card.innerHTML = '<p class="rc-h">대피 경로 찾는 중…</p>';
     await ensure(x, y);
     // 11/2: 점 하나에만 붙이면 계단 끝 · 끊긴 짧은 길 · 큰길 건너편에 붙어 바로 옆 대피시설을 못 찾음
@@ -152,7 +152,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     goal.setLngLat(f.geometry.coordinates).addTo(map);
     if (fit) { // 새 경로: 경로 전체가 보이게(오른쪽 아래 카드 자리는 비움)
       const xs = line.map((c) => c[0]), ys = line.map((c) => c[1]);
-      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: matchMedia('(max-width: 1180px)').matches ? { top: 40, left: 30, right: 30, bottom: Math.round(map.getContainer().clientHeight * (moreOpen ? 0.55 : matchMedia('(max-width: 700px)').matches ? 0.25 : 0.35)) } : { top: 80, left: 60, right: 60, bottom: 260 }, pitch: 30, maxZoom: 17, duration: 1000 });
+      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: matchMedia('(max-width: 1180px)').matches ? { top: 40, left: 30, right: 30, bottom: Math.round(map.getContainer().clientHeight * (moreOpen ? 0.55 : 0.3)) } : { top: 80, left: 60, right: 60, bottom: 260 }, pitch: 30, maxZoom: 17, duration: 1000 });
     }
     const n = { ok: 0, no: 0 };
     const rows = persona.map((pp, p) => {
