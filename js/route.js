@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 잠긴 길(0.3 m 이상 = 인명 위해 수심)과 계단을 피해 가장 가까운 대피시설까지 걷는 길.
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=fd19eb1';
+import { BUILD_OP } from './map.js?v=8857a2d';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -82,14 +82,15 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
   const pin = new maplibregl.Marker({ element: tag('출발', 'from'), anchor: 'bottom' });
   const goal = new maplibregl.Marker({ element: tag('도착', 'to'), anchor: 'bottom' });
   const card = document.getElementById('route-card'), btn = document.getElementById('route-btn');
-  let on = false, start = null, timer = 0;
+  let on = false, start = null, timer = 0, mini = false; // mini = 카드 접음(시설 이름 한 줄만, 다시 그려도 유지)
+  const BTNS = () => `<button type="button" class="rc-x" aria-label="경로 지우기">✕</button><button type="button" class="rc-min" aria-expanded="${!mini}" aria-label="경로 정보 ${mini ? '펴기' : '접기'}">${mini ? '＋' : '－'}</button>`;
 
   async function solve(fit = false) {
     if (!start) return;
     const [x, y] = start, rain = getRain();
     // 폰(≤700): 유형별 표는 접어 둠(펼치면 지도를 70 % 가림, 10/31 승우). 다시 그릴 때는 펼친 상태 유지
     const more = card.querySelector('.rc-more'), moreOpen = more ? more.open : !matchMedia('(max-width: 700px)').matches;
-    card.hidden = false; card.innerHTML = '<p class="rc-h">대피 경로 찾는 중…</p>';
+    card.hidden = false; card.classList.toggle('mini', mini); card.innerHTML = '<p class="rc-h">대피 경로 찾는 중…</p>';
     await ensure(x, y);
     const sv = shelters.features.map((f) => ({ f, n: nearest(...f.geometry.coordinates) })).filter((s) => s.n && s.n.d < 150);
     const goalOf = new Map(sv.map((s) => [s.n.v, s.f]));
@@ -113,7 +114,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     }
     if (found == null) {
       map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); goal.remove();
-      card.innerHTML = `<button type="button" class="rc-x" aria-label="경로 지우기">✕</button><p class="rc-h">도달 가능한 대피시설 없음</p><p class="rc-s">${sv.length ? '주변 도로가 침수되었거나 6 km 이내에 대피시설이 없습니다' : '이 지역은 대피시설 정보가 없습니다'}</p>`;
+      card.innerHTML = `${BTNS()}<p class="rc-h">도달 가능한 대피시설 없음</p><p class="rc-s">${sv.length ? '주변 도로가 침수되었거나 6 km 이내에 대피시설이 없습니다' : '이 지역은 대피시설 정보가 없습니다'}</p>`;
       return;
     }
     const line = [[x, y]]; for (let v = found; v != null; v = prev.get(v)) line.splice(1, 0, [X[v], Y[v]]);
@@ -135,7 +136,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
       return `<tr><td><span class="pn"><i class="chip" style="background:${pp.color}"></i>${pp.name}</span></td><td class="v">${Math.max(1, Math.round(min))}분</td><td><span class="vd">${verdict}</span></td></tr>`;
     }).join('');
     const p = f.properties, cap = p.수용인원명 != null ? `${Math.round(p.수용인원명).toLocaleString('ko-KR')}명` : '–';
-    card.innerHTML = `<button type="button" class="rc-x" aria-label="경로 지우기">✕</button><p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
+    card.innerHTML = `${BTNS()}<p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
       <dl class="rc-f"><div><dt>거리</dt><dd>${(m / 1000).toFixed(2)} km</dd></div><div><dt>수용 인원</dt><dd>${cap}</dd></div><div><dt>위치</dt><dd>${p.자치구} ${p.행정동}</dd></div></dl>
       ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다</p>' : ''}<details class="rc-more"${moreOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
       <table><thead><tr><th>시민 유형</th><th class="v">도보 시간</th><th>대피 가능 여부</th></tr></thead><tbody>${rows}</tbody></table></details>`;
@@ -146,7 +147,13 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
   const go = (ll) => { ghost(true); start = [ll.lng, ll.lat]; pin.setLngLat(start).addTo(map); solve(true); };
   const clear = () => { ghost(false); start = null; pin.remove(); goal.remove(); card.hidden = true; map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); };
   map.on('click', (e) => { if (on) go(e.lngLat); });
-  card.addEventListener('click', (e) => { if (e.target.closest('.rc-x')) clear(); });
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.rc-x')) clear();
+    else if (e.target.closest('.rc-min, .rc-h')) { // 접기 버튼 또는 시설 이름 누르기 = 접기/펴기
+      mini = !mini; card.classList.toggle('mini', mini);
+      const b = card.querySelector('.rc-min'); b.textContent = mini ? '＋' : '－'; b.setAttribute('aria-expanded', String(!mini)); b.setAttribute('aria-label', `경로 정보 ${mini ? '펴기' : '접기'}`);
+    }
+  });
 
   // 건물 클릭 → "대피 경로로 안내할까요?" → 안내 = 그 건물에서 가장 가까운 대피시설
   const ask = new maplibregl.Popup({ closeButton: false, maxWidth: '240px', className: 'askpop', offset: 6 });

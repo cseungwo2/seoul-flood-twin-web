@@ -1,5 +1,5 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=fd19eb1';
+import { addLandmarks3D } from './landmarks3d.js?v=8857a2d';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
@@ -326,10 +326,12 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   const groundM = (m) => ['interpolate', ['exponential', 2], ['zoom'], 13, ['*', m, 0.05], 18, ['*', m, 1.6]]; // m → px(위도 37.6° 근사)
   map.addLayer({ id: 'campus-ground', type: 'fill', source: 'campus-ground', minzoom: 13, filter: ['==', ['geometry-type'], 'Polygon'],
     paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.92 } }, 'roads-line');
-  map.addLayer({ id: 'campus-walk', type: 'line', source: 'campus-ground', minzoom: 14, filter: ['==', ['geometry-type'], 'LineString'],
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': ['match', ['get', 'kind'], 'steps', '#BDB5A6', '#E2DCCF'], 'line-width': groundM(['get', 'w']),
-      'line-dasharray': ['match', ['get', 'kind'], 'steps', ['literal', [0.4, 0.25]], ['literal', [1, 0]]] } }, 'roads-line');
+  // 보행로 = 실선, 계단 = 점선(MapLibre 4 는 점선을 속성별로 못 줌 → 레이어 2개)
+  const isLine = ['==', ['geometry-type'], 'LineString'], isSteps = ['==', ['get', 'kind'], 'steps'];
+  map.addLayer({ id: 'campus-walk', type: 'line', source: 'campus-ground', minzoom: 14, filter: ['all', isLine, ['!', isSteps]],
+    layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#E2DCCF', 'line-width': groundM(['get', 'w']) } }, 'roads-line');
+  map.addLayer({ id: 'campus-steps', type: 'line', source: 'campus-ground', minzoom: 14, filter: ['all', isLine, isSteps],
+    paint: { 'line-color': '#BDB5A6', 'line-width': groundM(['get', 'w']), 'line-dasharray': [0.4, 0.25] } }, 'roads-line');
   // 고려대 안암 캠퍼스 정밀 모형(prep/campus_ku.py): 실제 바닥 · 층수 높이 · 외벽 재질 색 + 항공사진 지붕 색(벽 · 지붕 판 2조각). 그 자리 일반 건물은 타일에서 뺌
   map.addSource('campus', { type: 'geojson', data: BASE + 'data/campus_ku.geojson' });
   map.addLayer({ id: 'campus', type: 'fill-extrusion', source: 'campus', minzoom: BUILD_Z, paint: {

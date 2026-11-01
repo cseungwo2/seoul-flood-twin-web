@@ -1,5 +1,5 @@
 // 패널: 왼쪽 슬라이더 · 위 지표 줄 · 오른쪽 선택 구(경보 문장 + 위험 인원 막대 · ARSM 곡선).
-import { sentence, demand, arsmCurve, lifeShown, volunteerPlan, capacity } from './model.js?v=fd19eb1';
+import { sentence, demand, arsmCurve, lifeShown, volunteerPlan, capacity } from './model.js?v=8857a2d';
 
 export const RES = [
   { k: 'shelter', f: 'shelter_cap', name: '대피시설 수용 인원', short: '대피시설', unit: '명' },
@@ -210,6 +210,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       RES.forEach((r) => { $(`na-${r.k}`).hidden = true; });
     },
     gu(gi, alerts) {
+      const pr = $('p-right'), keep = pr.scrollTop; // 사파리: 표를 다시 그리면 패널 스크롤이 맨 위로 튐(11/1 승우) → 끝에서 되돌림
       guSel.value = gi; resNA(gi);
       const r = Math.round(S.rain), D = demand(M, S, gi), dMax = Math.max(1, ...D), L = lifeShown(M, S, gi);
       const took = capacity(M, S, gi, D).took ?? D.map(() => 0);   // 유형별 대피시설 수용 인원(자원 꺼짐 · 자료 없음 = 0)
@@ -241,6 +242,7 @@ export function initPanels({ M, S, sel, onChange, onSelect }) {
       arsmChart.options.plugins.guides.rain = r;
       arsmChart.options.plugins.guides.noDemand = !D.some((d) => d > 0);
       arsmChart.draw();
+      pr.scrollTop = keep;
     },
     /** ARSM 곡선(선택 구만, 매 갱신마다). */
     arsm(gi) {

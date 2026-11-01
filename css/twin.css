@@ -179,6 +179,11 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .routecard { position: absolute; right: 10px; bottom: 40px; z-index: 2; width: min(430px, calc(100% - 20px)); max-height: 70%; overflow-y: auto; padding: 12px 14px; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid #2E7D4F; border-radius: 4px; }
 .routecard .rc-x { float: right; margin: -4px -4px 0 8px; width: 26px; height: 26px; border: 0; background: none; color: var(--ink-2); font-size: 16px; cursor: pointer; }
 .routecard .rc-x:hover { color: var(--crimson); }
+.routecard .rc-min { float: right; margin: -4px 0 0 4px; width: 26px; height: 26px; border: 0; background: none; color: var(--ink-2); font-size: 15px; cursor: pointer; }
+.routecard .rc-h { cursor: pointer; }
+/* 접은 카드 = 시설 이름 한 줄만(지도를 거의 안 가림, 11/1 승우) */
+.routecard.mini > :not(.rc-x, .rc-min, .rc-h) { display: none; }
+.routecard.mini .rc-h { margin: 0; line-height: 26px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .askpop .maplibregl-popup-content p { margin: 0 0 8px; font-size: 15px; }
 .askpop .ask-b { display: flex; gap: 6px; }
 .askpop .ask-b button { flex: 1; padding: 6px 0; font: 700 15px/1 var(--font); border-radius: 4px; cursor: pointer; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); }
@@ -367,6 +372,11 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .kpi dd b { font-size: 22px; }
   .kpi dd span { font-size: 13px; }
 }
+/* 폴더블 펼침 · 태블릿(600~1180): 왼쪽 서랍은 지도 칸만 덮고 어둡게 안 함 → 오른쪽 구 패널 · 그래프를 보면서 강우 · 자원 조절(11/1 승우) */
+@media (min-width: 600px) and (max-width: 1180px) {
+  .panel.left { width: min(380px, calc(100vw - var(--rw) - 20px)); }
+  body.drawer .scrim { display: none; }
+}
 /* 아주 좁은 휴대폰(<400): 요약 숫자 2×2 */
 @media (max-width: 399px) {
   .kpi { display: grid; grid-template-columns: 1fr 1fr; }
@@ -397,6 +407,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .sec-res > summary { gap: 8px; } .sec-res > summary > span { min-width: 0; }
   .tog:checked::after { transform: translateX(20px); }
   .routecard .rc-x { width: 44px; height: 44px; margin: -12px -12px 0 4px; }
+  .routecard .rc-min { width: 44px; height: 44px; margin: -12px 0 0 0; }
   .maplibregl-ctrl-group button { width: 44px; height: 44px; }
   .mapbtns { right: 64px; }
   /* 패널 접기(태블릿 가로 = 데스크톱 배치): 44 px, 지도 가장자리 가운데로(지도 버튼과 안 겹치게) */
@@ -429,10 +440,12 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .kpi.wx { display: none; }
   /* 경로 카드 = 낮은 띠: 시설 이름 + 거리 · 수용 · 위치 한 줄 글자(상자 없음), 표는 접힘(펼치면 카드 안에서 스크롤)
      11/1 승우: 상자 3칸 + 머리글이 지도를 너무 가림 */
-  .routecard { bottom: 36px; max-height: 52%; padding: 6px 10px 2px; }
+  .routecard { bottom: 36px; max-height: 34%; padding: 4px 10px 2px; font-size: 13px; }
   .routecard .rc-k { display: none; }
   .routecard .rc-h { margin: 0; font-size: 15px; line-height: 1.35; }
-  .routecard .rc-x { margin: -8px -10px 0 4px; }
+  .routecard .rc-x { margin: -8px -10px 0 0; }
+  .routecard .rc-min { margin: -8px 0 0 0; }
+  .routecard th, .routecard td { padding: 3px 2px; }
   .routecard .rc-f { display: flex; flex-wrap: wrap; gap: 0 10px; margin: 2px 0 0; }
   .routecard .rc-f > div { display: flex; align-items: baseline; gap: 3px; padding: 0; text-align: left; background: none; border: 0; }
   .routecard .rc-f dt { font-size: 12px; }
