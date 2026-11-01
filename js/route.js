@@ -1,6 +1,6 @@
-// 대피 경로: 지도에 핀을 찍으면 잠긴 길(0.3 m 이상 = 인명 위해 수심)과 계단을 피해 가장 가까운 대피시설까지 걷는 길.
+// 대피 경로: 지도에 핀을 찍으면 계단을 피해 가장 가까운 대피시설까지 걷는 길(침수 수심과 무관, 11/2 승우).
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=4f91366';
+import { BUILD_OP } from './map.js?v=31cf878';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -90,11 +90,11 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     const [x, y] = start, rain = getRain();
     // 폰(≤700): 유형별 표는 접어 둠(펼치면 지도를 70 % 가림, 10/31 승우). 다시 그릴 때는 펼친 상태 유지
     const more = card.querySelector('.rc-more'), moreOpen = more ? more.open : !matchMedia('(max-width: 700px)').matches;
-    card.hidden = false; card.classList.toggle('mini', mini); card.innerHTML = '<p class="rc-h">대피 경로 찾는 중…</p>';
+    card.hidden = false; card.classList.toggle('mini', mini); card.classList.remove('rc-none'); card.innerHTML = '<p class="rc-h">대피 경로 찾는 중…</p>';
     await ensure(x, y);
     const sv = shelters.features.map((f) => ({ f, n: nearest(...f.geometry.coordinates) })).filter((s) => s.n && s.n.d < 150);
     const goalOf = new Map(sv.map((s) => [s.n.v, s.f]));
-    const open = (e) => !e.st && e.on > rain; // 계단 · 잠긴 길 제외
+    const open = (e) => !e.st; // 계단만 제외. 물 찬 길도 지나감 = 가장 가까운 대피시설로 안내(11/2 승우)
     const s0 = nearest(x, y, (v) => adj[v].some(open));
     const gi = getGu(start), startWet = onsetAt(x, y) <= rain;
     let found = null; const D = new Map(), prev = new Map();
@@ -114,7 +114,8 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     }
     if (found == null) {
       map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); goal.remove();
-      card.innerHTML = `${BTNS()}<p class="rc-h">도달 가능한 대피시설 없음</p><p class="rc-s">${sv.length ? '주변 도로가 침수되었거나 6 km 이내에 대피시설이 없습니다' : '이 지역은 대피시설 정보가 없습니다'}</p>`;
+      card.classList.add('rc-none'); // 11/2 승우: 제목 한 줄만, 왼쪽 정렬 · 세로 가운데
+      card.innerHTML = `<p class="rc-h">도달 가능한 대피시설 없음</p>${BTNS()}`;
       return;
     }
     const line = [[x, y]]; for (let v = found; v != null; v = prev.get(v)) line.splice(1, 0, [X[v], Y[v]]);

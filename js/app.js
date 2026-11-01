@@ -1,10 +1,10 @@
 // 상태 S 하나를 슬라이더 · 지도 · 패널이 같이 봄. 슬라이더 → rAF 로 한 번에 갱신(ARSM 곡선 포함).
-import { alert, barrierShare, demand, pumpLevelCm, recovered } from './model.js?v=4f91366';
-import { createMap } from './map.js?v=4f91366';
-import { initPanels } from './panels.js?v=4f91366';
-import { createRain } from './rain.js?v=4f91366';
-import { initRoute } from './route.js?v=4f91366';
-import { initWeather } from './weather.js?v=4f91366';
+import { alert, barrierShare, demand, pumpLevelCm, recovered } from './model.js?v=31cf878';
+import { createMap } from './map.js?v=31cf878';
+import { initPanels } from './panels.js?v=31cf878';
+import { createRain } from './rain.js?v=31cf878';
+import { initRoute } from './route.js?v=31cf878';
+import { initWeather } from './weather.js?v=31cf878';
 
 const [M, meta] = await Promise.all(['data/model.json', 'data/meta.json'].map((u) => fetch(u).then((r) => r.json())));
 const Q = new URLSearchParams(location.search);
@@ -25,6 +25,10 @@ const computeAlerts = () => {
 const panels = initPanels({ M, S, sel, onChange: () => schedule(), onSelect: (gi) => select(gi) });
 // 상단 실시간 날씨: '실제 강우 적용' = 지난 1시간 강수를 강우 슬라이더에(0~174)
 initWeather((mm) => { const el = document.getElementById('s-rain'); el.value = Math.max(0, Math.min(174, Math.round(mm))); el.dispatchEvent(new Event('input')); });
+// 접은 폰(≤700 세로): 날씨 칸을 지도 버튼 줄 맨 왼쪽으로 옮김(지도 크기 그대로, 11/2 승우). 넓어지면 제자리로
+{ const wx = document.getElementById('wx'), home = wx.parentNode, next = wx.nextSibling, mq = matchMedia('(max-width: 700px) and (orientation: portrait)');
+  const place = () => (mq.matches ? document.querySelector('.mapbtns').prepend(wx) : home.insertBefore(wx, next));
+  mq.addEventListener('change', place); place(); }
 let twin = null;   // 지도는 없어도 됨: 패널 · 지표 · 문장은 model.json 만으로 먼저 그림
 const rainFx = createRain(document.getElementById('rain'));
 
