@@ -1,10 +1,10 @@
 // 상태 S 하나를 슬라이더 · 지도 · 패널이 같이 봄. 슬라이더 → rAF 로 한 번에 갱신(ARSM 곡선 포함).
-import { alert, barrierShare, demand, pumpLevelCm, recovered } from './model.js?v=6c9ea3e';
-import { createMap } from './map.js?v=6c9ea3e';
-import { initPanels } from './panels.js?v=6c9ea3e';
-import { createRain } from './rain.js?v=6c9ea3e';
-import { initRoute } from './route.js?v=6c9ea3e';
-import { initWeather } from './weather.js?v=6c9ea3e';
+import { alert, barrierShare, demand, pumpLevelCm, recovered } from './model.js?v=231b600';
+import { createMap } from './map.js?v=231b600';
+import { initPanels } from './panels.js?v=231b600';
+import { createRain } from './rain.js?v=231b600';
+import { initRoute } from './route.js?v=231b600';
+import { initWeather } from './weather.js?v=231b600';
 
 const [M, meta] = await Promise.all(['data/model.json', 'data/meta.json'].map((u) => fetch(u).then((r) => r.json())));
 const Q = new URLSearchParams(location.search);

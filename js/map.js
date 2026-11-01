@@ -1,5 +1,5 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=6c9ea3e';
+import { addLandmarks3D } from './landmarks3d.js?v=231b600';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
@@ -255,7 +255,8 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
     if (terrainOn && z >= 13) { map.setTerrain(null); terrainOn = false; }
     else if (!terrainOn && z < 12.8) { map.setTerrain({ source: 'dem', exaggeration: 1.5 }); terrainOn = true; }
   };
-  map.on('zoom', terrainByZoom); terrainByZoom();
+  // 확대 · 축소 '도중'(zoom 이벤트)에 지형을 바꾸면 휠 · 핀치 확대가 그 자리에서 멈춤(11/2 재현: 13.07 에서 고정) → 움직임이 끝난 뒤(moveend)에만 바꿈
+  map.on('moveend', terrainByZoom); terrainByZoom();
   map.addLayer({ id: 'hillshade', type: 'hillshade', source: 'dem-shade', paint: { 'hillshade-exaggeration': ['interpolate', ['linear'], ['zoom'], 13, 0.75, 15.5, 0.15], 'hillshade-shadow-color': '#4F5C40', 'hillshade-highlight-color': 'rgba(250, 251, 240, 0.55)', 'hillshade-accent-color': '#6E7A58' } },
     map.getStyle().layers.find((l) => ['transportation', 'building'].includes(l['source-layer']))?.id); // 숲 색 위 · 도로 아래
   } catch (e) { console.info('지형 없이 계속:', e.message); }
@@ -358,19 +359,20 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
     'circle-color': ['case', ['==', ['get', '침수위험구역포함'], '포함'], '#FFFFFF', '#262626'],
     'circle-stroke-color': ['case', ['==', ['get', '침수위험구역포함'], '포함'], '#8D0022', '#FFFFFF'],
     'circle-stroke-width': ['case', ['==', ['get', '침수위험구역포함'], '포함'], 2, 1] } });
-  // 확대(≥ 13)하면 점 대신 임시주거시설 표지 그림(송파 · 동두천 표지판을 다시 그림, web/shelter.png 96 px). 작게 · 겹쳐도 다 보이게
+  // 대피시설 = 임시주거시설 표지 그림(송파구 표지판 사진 격자 실측으로 다시 그림, web/shelter.png 96 px), 줌 11 부터 작게 · 겹쳐도 다 보이게
   try {
     const ic = await map.loadImage(BASE + 'shelter.png');
     map.addImage('shelter-ic', ic.data, { pixelRatio: 4 });
-    map.setLayerZoomRange('shelters', 11, 13);
-    map.addLayer({ id: 'shelters-icon', type: 'symbol', source: 'shelters', minzoom: 13, layout: {
-      'icon-image': 'shelter-ic', 'icon-size': ['interpolate', ['linear'], ['zoom'], 13, 0.6, 16, 0.85], 'icon-allow-overlap': true, 'icon-ignore-placement': true } });
+    map.setLayoutProperty('shelters', 'visibility', 'none'); // 예전 검은 점은 안 씀(11/2 승우) — 그림을 못 불러올 때만 점
+    map.addLayer({ id: 'shelters-icon', type: 'symbol', source: 'shelters', minzoom: 11, layout: {
+      'icon-image': 'shelter-ic', 'icon-size': ['interpolate', ['linear'], ['zoom'], 11, 0.38, 13, 0.6, 16, 0.85], 'icon-allow-overlap': true, 'icon-ignore-placement': true } });
   } catch (e) { console.info('대피시설 그림 없이 점으로:', e.message); }
   // 범례 '대피시설' 누르기 = 지도에서 켜기 · 끄기(경로 안내는 그대로 됨)
   const shTog = document.getElementById('shelter-tog');
   shTog?.addEventListener('click', () => {
     const on = shTog.getAttribute('aria-pressed') !== 'true'; shTog.setAttribute('aria-pressed', String(on));
-    for (const id of ['shelters', 'shelters-icon']) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+    const id = map.getLayer('shelters-icon') ? 'shelters-icon' : 'shelters'; // 그림이 있으면 그림만, 없으면 점
+    map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
   });
 
   map.addSource('mountains', { type: 'geojson', data: { type: 'FeatureCollection', features: MOUNTAINS.map(([name, x, y]) => ({ type: 'Feature', properties: { name }, geometry: { type: 'Point', coordinates: [x, y] } })) } });
