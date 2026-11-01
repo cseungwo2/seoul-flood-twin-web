@@ -1,5 +1,5 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=64a0225';
+import { addLandmarks3D } from './landmarks3d.js?v=3221977';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
@@ -367,13 +367,15 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
     map.addLayer({ id: 'shelters-icon', type: 'symbol', source: 'shelters', minzoom: 11, layout: {
       'icon-image': 'shelter-ic', 'icon-size': ['interpolate', ['linear'], ['zoom'], 11, 0.38, 13, 0.6, 16, 0.85], 'icon-allow-overlap': true, 'icon-ignore-placement': true } });
   } catch (e) { console.info('대피시설 그림 없이 점으로:', e.message); }
-  // 범례 '대피시설' 누르기 = 지도에서 켜기 · 끄기(경로 안내는 그대로 됨)
+  // 대피시설 켜기 · 끄기: 처음엔 꺼짐, 경로 안내를 찾으면 켜고 끄면 끔(app.js → route onActive), 범례 '대피시설' 누르기로도(11/2 승우)
   const shTog = document.getElementById('shelter-tog');
-  shTog?.addEventListener('click', () => {
-    const on = shTog.getAttribute('aria-pressed') !== 'true'; shTog.setAttribute('aria-pressed', String(on));
+  const setShelters = (on) => {
+    shTog?.setAttribute('aria-pressed', String(on));
     const id = map.getLayer('shelters-icon') ? 'shelters-icon' : 'shelters'; // 그림이 있으면 그림만, 없으면 점
     map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
-  });
+  };
+  shTog?.addEventListener('click', () => setShelters(shTog.getAttribute('aria-pressed') !== 'true'));
+  setShelters(false);
 
   map.addSource('mountains', { type: 'geojson', data: { type: 'FeatureCollection', features: MOUNTAINS.map(([name, x, y]) => ({ type: 'Feature', properties: { name }, geometry: { type: 'Point', coordinates: [x, y] } })) } });
   map.addLayer({ id: 'mountains', type: 'symbol', source: 'mountains', layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': 14, 'text-offset': [0, -0.6] },
@@ -428,7 +430,7 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
 
   let selected = null;
   const api = {
-    map, routeMode: false, base: BASE, guBox, shelters,
+    map, routeMode: false, base: BASE, guBox, shelters, setShelters,
     water: { deep: water.deep, w: water.w, h: water.h, corners: meta.onset_corners },
     /** pick = 예상 피해 지역을 켠 시민 유형 비트(0 = 끔). 강우 · 켠 유형 · 양수기 · 물막이판이 바뀔 때만 부름.
      *  pumpL[gi] = model pumpLevelCm, block[gi] = model barrierShare(구별, null = 효과 없음). */

@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 계단을 피해 가장 가까운 대피시설까지 걷는 길(침수 수심과 무관, 11/2 승우).
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=64a0225';
+import { BUILD_OP } from './map.js?v=3221977';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -22,7 +22,7 @@ class Heap {
  * initRoute({ map, base, guBox, shelters, water: {deep, w, h, corners}, getGu(lngLat) → gi | null, persona, getAlert(gi, p), getRain() })
  * → { toggle(on), update() }
  */
-export function initRoute({ map, base, guBox, shelters, water, getGu, persona, getAlert, getRain }) {
+export function initRoute({ map, base, guBox, shelters, water, getGu, persona, getAlert, getRain, onActive = () => {} }) {
   // 걷는 길 그래프(불러온 구를 노드 id 로 합침)
   const X = [], Y = [], adj = [], key = new Map(), loaded = new Map();
   const [tl, , br] = water.corners;
@@ -174,8 +174,9 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
 
   // 경로를 보는 동안 3D 건물을 반투명하게(지형 위 선은 건물에 가려지므로)
   const ghost = (v) => map.getLayer('buildings') && map.setPaintProperty('buildings', 'fill-extrusion-opacity', v ? 0.3 : BUILD_OP);
-  const go = (ll) => { ghost(true); start = [ll.lng, ll.lat]; pin.setLngLat(start).addTo(map); solve(true); };
-  const clear = () => { ghost(false); start = null; pin.remove(); goal.remove(); card.hidden = true; map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); };
+  const go = (ll) => { onActive(true); ghost(true); start = [ll.lng, ll.lat]; pin.setLngLat(start).addTo(map); solve(true); };
+  // clear: 경로 모드가 켜져 있으면 대피시설은 계속 보임(onActive(on))
+  const clear = () => { onActive(on); ghost(false); start = null; pin.remove(); goal.remove(); card.hidden = true; map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); };
   map.on('click', (e) => { if (on) go(e.lngLat); });
   card.addEventListener('click', (e) => {
     const t = e.target.closest('[data-route]');
@@ -203,7 +204,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
   const toggle = (v = !on) => {
     on = v; btn.setAttribute('aria-pressed', String(on)); map.getCanvas().style.cursor = on ? 'crosshair' : '';
     btn.textContent = on ? '대피 경로 끄기' : '대피 경로';
-    if (!on) clear();
+    if (on) onActive(true); else clear();
   };
   btn.hidden = false;
   btn.addEventListener('click', () => toggle());

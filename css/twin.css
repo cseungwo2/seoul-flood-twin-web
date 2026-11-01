@@ -496,7 +496,8 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 @media (max-width: 1180px), (pointer: coarse) { .routecard .rc-tabs button { min-height: 40px; } .routecard .rc-tabs { width: calc(100% - 96px); } }
 /* 폰(≤700): 건물 안내 질문 상자 작게(Duo 접음에서 지도의 3/4 를 덮던 것, 11/2 승우) */
 @media (max-width: 700px) {
-  .askpop .maplibregl-popup-content { padding: 7px 9px; }
-  .askpop .maplibregl-popup-content p { margin: 0 0 6px; font-size: min(12px, 2.9vw); }
-  .askpop .ask-b button { min-height: 32px; padding: 0; font-size: 12px; }
+  .askpop .maplibregl-popup-content { padding: 5px 7px; }
+  .askpop .maplibregl-popup-content p { margin: 0 0 4px; font-size: min(11px, 2.6vw); }
+  .askpop .ask-b { gap: 4px; }
+  .askpop .ask-b button { min-height: 26px; padding: 0; font-size: 11px; }
 }
