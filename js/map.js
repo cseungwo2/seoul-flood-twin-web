@@ -1,5 +1,5 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=8857a2d';
+import { addLandmarks3D } from './landmarks3d.js?v=9decde1';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
@@ -260,7 +260,7 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   const wsrc = map.getSource('water-depth');
 
   // 건물 · 도로: 정적 벡터 타일(prep/build_tiles.mjs, 레이어 b = 건물 · r = 도로) — 화면에 걸친 칸만 작업자가 받아 그림
-  map.addSource('city', { type: 'vector', tiles: [BASE + 'data/tiles/{z}/{x}/{y}.pbf'], minzoom: 14, maxzoom: TILE_MAXZ, bounds: seoul }); // z13 타일은 안 받음(무거움)
+  map.addSource('city', { type: 'vector', tiles: [BASE + 'data/tiles/{z}/{x}/{y}.pbf'], minzoom: 13, maxzoom: TILE_MAXZ, bounds: seoul }); // z13 타일 = 높이 20 m 이상 건물만(prep/build_tiles.mjs)
   // 바탕 도로 면: OSM 도로 중심선을 등급별 폭(대략 실제 m, 줌 따라 2배씩)으로 그어 도로 면 자료가 빈 곳도 길이 보이게(중앙선만 떠 있는 곳 없앰)
   // 줌 보간은 식의 맨 바깥에 한 번만 허용 → 줌 보간 안에서 등급별 폭(match)을 고름
   const CLS_W = (k) => ['match', ['get', 'class'], ['motorway', 'trunk'], 24 * k, 'primary', 20 * k, 'secondary', 15 * k, 'tertiary', 11 * k, 'minor', 7 * k, 4 * k];
@@ -313,7 +313,7 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
     map.setLayerZoomRange('landmark-parts', 12.5, 24);
   } catch (e) { console.info('특이 건물 없이 계속:', e.message); }
   // ponytail: z13 부터 미리 만들면 z13 타일(건물 수십만 동)이 무거워 브라우저가 죽음(10/31 측정) → 13.5 부터. 더 빠르게는 z14 전용 타일·minzoom 14 로
-  map.addLayer({ id: 'buildings', type: 'fill-extrusion', source: 'city', 'source-layer': 'b', minzoom: BUILD_Z, paint: {
+  map.addLayer({ id: 'buildings', type: 'fill-extrusion', source: 'city', 'source-layer': 'b', minzoom: 13, paint: {
     'fill-extrusion-color': buildColor(0, null, colors),
     'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': BUILD_OP,
     'fill-extrusion-vertical-gradient': true } }, map.getLayer('landmark-parts') ? 'landmark-parts' : undefined);
@@ -359,7 +359,12 @@ export async function createMap({ container, meta, onSelect, view, colors, barri
   // 고르기(마우스를 올리면 손가락 커서만, 내용은 클릭 → 오른쪽 패널)
   map.on('mousemove', 'gu-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'gu-fill', () => { map.getCanvas().style.cursor = ''; });
-  map.on('click', 'gu-fill', (e) => { const gi = e.features?.[0]?.properties.gi; if (gi != null && !api.routeMode && map.getZoom() < BUILD_Z) onSelect(gi); }); // 대피 경로 모드 · 건물이 보이는 확대에선 클릭 = 경로
+  // 구 고르기: 대피 경로 모드가 아닐 때. 건물이 보이는 확대(≥ 14)에선 건물 = 경로 안내, 길 · 빈 땅 = 그 구 고르기(이미 고른 구면 그대로, 11/2 승우: 확대하면 구 클릭이 안 됨)
+  map.on('click', 'gu-fill', (e) => {
+    const gi = e.features?.[0]?.properties.gi;
+    if (gi == null || api.routeMode) return;
+    if (map.getZoom() < BUILD_Z || (gi !== selected && !map.queryRenderedFeatures(e.point, { layers: HIT }).length)) onSelect(gi);
+  });
 
   // 서울 밖은 바탕색으로 덮음(맨 위). 우리 자료는 전부 서울 안
   map.addSource('seoul-mask', { type: 'geojson', data: BASE + 'data/seoul_mask.geojson' });
