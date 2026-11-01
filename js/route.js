@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 계단을 피해 가장 가까운 대피시설까지 걷는 길(침수 수심과 무관, 11/2 승우).
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=231b600';
+import { BUILD_OP } from './map.js?v=64a0225';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -168,7 +168,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     const tabs = `<div class="rc-tabs">${[['safe', '우회 경로'], ['fast', '빠른 경로']].map(([k, w]) => `<button type="button" data-route="${k}" aria-pressed="${mode === k}"${k === 'safe' && !safe ? ' disabled' : ''}>${w}</button>`).join('')}</div>`;
     card.innerHTML = `${BTNS()}${tabs}${warn ? '<p class="rc-w rc-warn">현재 안내된 길은 도로 침수 위험이 있으니 각별히 주의하시기 바랍니다.</p>' : ''}<p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
       <dl class="rc-f"><div><dt>거리</dt><dd>${(m / 1000).toFixed(2)} km</dd></div><div><dt>수용 인원</dt><dd>${cap}</dd></div><div><dt>위치</dt><dd>${p.자치구} ${p.행정동}</dd></div></dl>
-      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다</p>' : ''}<details class="rc-more"${keepOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
+      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다.</p>' : ''}<details class="rc-more"${keepOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
       <table><thead><tr><th>시민 유형</th><th class="v">도보 시간</th><th>대피 가능 여부</th></tr></thead><tbody>${rows}</tbody></table></details>`;
   }
 
@@ -189,6 +189,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
 
   // 건물 클릭 → "대피 경로로 안내할까요?" → 안내 = 그 건물에서 가장 가까운 대피시설
   const ask = new maplibregl.Popup({ closeButton: false, maxWidth: 'none', className: 'askpop', offset: 6 });
+  map.on('movestart', () => ask.remove()); // 지도를 움직이면 질문 닫음(남아 있으면 확대 · 축소 때 화면 밖으로 잘려 보임, 11/2 승우)
   const offer = (ll) => {
     if (on) return; // 경로 모드에선 바로 핀
     const el = document.createElement('div');

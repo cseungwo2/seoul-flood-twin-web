@@ -1,10 +1,10 @@
 // 지도: OpenFreeMap positron(포스터 결로 다시 칠함) + 3D 지형 · 힐셰이드 + 물(canvas) + 구 경보 색 + 도로 · 건물(가까이서만) + 랜드마크 + 대피소.
-import { addLandmarks3D } from './landmarks3d.js?v=231b600';
+import { addLandmarks3D } from './landmarks3d.js?v=64a0225';
 
 const BASE = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
 const BUILD_Z = 14; // 건물 · 도로 면이 보이는 줌. 13.5 에선 z13 타일(한 장에 건물 수십만 동)을 써서 확대 때 렉 → z14 타일만 쓰게 14 부터(10/31)
 // 건물 불투명도(경로 볼 때 반투명 → 되돌릴 값). 서서히 나타나는 0.4줌 효과는 늦어 보여서 BUILD_Z 에서 바로 켜짐
-export const BUILD_OP = ['interpolate', ['linear'], ['zoom'], BUILD_Z - 0.05, 0, BUILD_Z, 0.92];
+export const BUILD_OP = 1; // 11/2: 불투명. 예전 '13.95 까지 0 → 14 에 0.92' 는 줌 13 건물을 받아 놓고 안 보이게 해 렉만 늘림 + 반투명이라 겹친 면이 비쳐 지저분
 const TILE_MAXZ = 14; // prep/build_tiles.mjs 의 MAXZ 와 같게. 더 확대하면 z14 타일을 늘려 씀(z18 까지 모양 차이 없음)
 const WATER = [0xffa1470d, 0xfff5a542, 0xfff9ca90]; // ABGR(리틀 엔디언): #0D47A1 · #42A5F5 · #90CAF9
 const MOUNTAINS = [
