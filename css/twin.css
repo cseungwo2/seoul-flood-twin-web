@@ -169,6 +169,10 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .sw { width: 14px; height: 10px; display: inline-block; border: 1px solid var(--line-2); }
 .sw.w2 { background: var(--w2); border-color: var(--w2); }
 .sw.w3 { background: var(--w3); border-color: var(--w3); }
+.lg-tog { all: unset; display: flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; }
+.lg-tog:focus-visible { outline: 2px solid var(--crimson); outline-offset: 2px; }
+.lg-tog[aria-pressed="false"] { opacity: 0.4; text-decoration: line-through; } /* 끔 = 흐리게 + 줄(시민 유형 범례와 같은 방식) */
+.lg-ic { width: 18px; height: 18px; flex: none; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); border: 1.5px solid #fff; box-shadow: 0 0 0 1px var(--ink); display: inline-block; margin: 0 2px; }
 .mapbtns { position: absolute; top: 10px; right: 52px; z-index: 2; display: flex; gap: 6px; }
 .mapback { padding: 7px 12px; font: 700 15px/1 var(--font); color: var(--crimson); background: var(--panel); border: 1px solid var(--crimson); border-radius: 4px; cursor: pointer; }
@@ -471,9 +475,18 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
   .mapbtns .kpi.wx dd b { font-size: 10.5px; line-height: 1.15; }
   .mapbtns .kpi.wx dd span { font-size: 10px; }
   .mapbtns .kpi.wx .wx-act { grid-column: 2; grid-row: 1 / 4; padding: 0 !important; }
-  .mapbtns .kpi.wx button { min-height: 34px; padding: 0 5px; font-size: 12px; }
+  .mapbtns .kpi.wx button { min-height: 34px; padding: 0 5px; font-size: 10px; line-height: 1.15; }
 }
 /* 경로 실패 카드(11/2 승우): '도달 가능한 대피시설 없음' 한 줄, 왼쪽 정렬 · 세로 가운데 */
 .routecard.rc-none { display: flex; align-items: center; gap: 4px; }
 .routecard.rc-none .rc-h { flex: 1; margin: 0; }
 .routecard.rc-none .rc-x, .routecard.rc-none .rc-min { float: none; flex: none; margin-top: 0; margin-bottom: 0; }
+/* 경로 고르기(11/2 승우): 우회 경로 · 빠른 경로 두 칸, 빠른 경로는 경고 문구 계속(카드를 접어도 보임) */
+.routecard .rc-tabs { display: flex; gap: 0; margin: 0 0 8px; border: 1px solid var(--line-2); border-radius: 4px; overflow: hidden; width: calc(100% - 64px); }
+.routecard .rc-tabs button { flex: 1; min-height: 32px; padding: 0 8px; font: 700 13px/1 var(--font); color: var(--ink-2); background: var(--panel); border: 0; cursor: pointer; }
+.routecard .rc-tabs button + button { border-left: 1px solid var(--line-2); }
+.routecard .rc-tabs button[aria-pressed="true"] { color: #fff; background: #2E7D4F; }
+.routecard .rc-tabs button[data-route="fast"][aria-pressed="true"] { background: var(--crimson); }
+.routecard .rc-warn { margin: 0 0 6px; text-align: left; }
+.routecard.mini > .rc-warn { display: block; margin: 4px 0 0; }
+@media (max-width: 1180px), (pointer: coarse) { .routecard .rc-tabs button { min-height: 40px; } .routecard .rc-tabs { width: calc(100% - 96px); } }

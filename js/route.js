@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 계단을 피해 가장 가까운 대피시설까지 걷는 길(침수 수심과 무관, 11/2 승우).
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=31cf878';
+import { BUILD_OP } from './map.js?v=d333212';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -55,6 +55,14 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     if (!loaded.has(g.gi)) loaded.set(g.gi, fetch(`${base}data/walk/${encodeURIComponent(g.gn)}.json`).then((r) => (r.ok ? r.json() : null)).then((d) => d && add(d)).catch(() => loaded.delete(g.gi)));
     return loaded.get(g.gi);
   }));
+  const R = 100; // 출발 · 대피시설을 걷는 길에 잇는 반경(m)
+  const within = (x, y, r, ok) => { // 격자 3×3(한 칸 ≈ 180~220 m) 안에서 r m 이내 길 점
+    const out = [], cx = Math.floor(x / G), cy = Math.floor(y / G);
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const v of grid.get(`${cx + i},${cy + j}`) ?? []) {
+      if (!ok(v)) continue; const d = dist(x, y, X[v], Y[v]); if (d <= r) out.push({ v, d });
+    }
+    return out;
+  };
   const nearest = (x, y, ok = () => true) => {
     let best = -1, bd = Infinity;
     for (let r = 0; r <= 2 && best < 0; r++) { // 격자 3×3 → 5×5
@@ -92,35 +100,53 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     const more = card.querySelector('.rc-more'), moreOpen = more ? more.open : !matchMedia('(max-width: 700px)').matches;
     card.hidden = false; card.classList.toggle('mini', mini); card.classList.remove('rc-none'); card.innerHTML = '<p class="rc-h">대피 경로 찾는 중…</p>';
     await ensure(x, y);
-    const sv = shelters.features.map((f) => ({ f, n: nearest(...f.geometry.coordinates) })).filter((s) => s.n && s.n.d < 150);
-    const goalOf = new Map(sv.map((s) => [s.n.v, s.f]));
-    const open = (e) => !e.st; // 계단만 제외. 물 찬 길도 지나감 = 가장 가까운 대피시설로 안내(11/2 승우)
-    const s0 = nearest(x, y, (v) => adj[v].some(open));
-    const gi = getGu(start), startWet = onsetAt(x, y) <= rain;
-    let found = null; const D = new Map(), prev = new Map();
-    if (s0) {
-      const h = new Heap(); D.set(s0.v, s0.d); h.push(s0.d, s0.v);
+    // 11/2: 점 하나에만 붙이면 계단 끝 · 끊긴 짧은 길 · 큰길 건너편에 붙어 바로 옆 대피시설을 못 찾음
+    // → 출발 = 주변 R m 안 걷는 길 점 전부(직선거리 더함), 도착 = 대피시설 R m 안 길 점 전부(남은 직선거리 더한 가상 도착점)
+    const walkable = (v) => adj[v].some((e) => !e.st);
+    const SH = shelters.features, link = new Map(); // 길 점 → [[대피시설 번호, 남은 m]]
+    SH.forEach((f, i) => { for (const n of within(...f.geometry.coordinates, R, walkable)) (link.get(n.v) ?? link.set(n.v, []).get(n.v)).push([i, n.d]); });
+    let src = within(x, y, R, walkable);
+    if (!src.length) { const s0 = nearest(x, y, walkable); src = s0 ? [s0] : []; }
+    const search = (open) => { // 가장 가까운 대피시설까지 → { line, f, m } | null
+      let found = null; const D = new Map(), prev = new Map(), h = new Heap();
+      for (const n of src) if (n.d < (D.get(n.v) ?? Infinity)) { D.set(n.v, n.d); h.push(n.d, n.v); }
       while (h.size) {
         const [d, v] = h.pop();
         if (d > D.get(v)) continue;
-        if (goalOf.has(v)) { found = v; break; }
+        if (typeof v === 'string') { found = v; break; } // 가상 도착점 'g{번호}'
         if (d > MAX_M) break;
+        for (const [i, gd] of link.get(v) ?? []) { const g = `g${i}`, nd = d + gd; if (nd < (D.get(g) ?? Infinity)) { D.set(g, nd); prev.set(g, v); h.push(nd, g); } }
         for (const e of adj[v]) {
           if (!open(e)) continue;
           const u = e.a === v ? e.b : e.a, nd = d + e.len;
           if (nd < (D.get(u) ?? Infinity)) { D.set(u, nd); prev.set(u, v); h.push(nd, u); }
         }
       }
-    }
-    if (found == null) {
+      if (found == null) return null;
+      const f = SH[+found.slice(1)], line = [[x, y]];
+      for (let v = prev.get(found); v != null; v = prev.get(v)) line.splice(1, 0, [X[v], Y[v]]);
+      line.push(f.geometry.coordinates);
+      return { line, f, m: D.get(found) };
+    };
+    // 11/2 승우: 우회 경로(침수 0.3 m 이상 길 피함) · 빠른 경로(침수 무시, 경고 문구 계속) 중 고르기. 계단은 둘 다 피함
+    const fast = search((e) => !e.st), safe = search((e) => !e.st && e.on > rain);
+    last = { fast, safe, same: !!(fast && safe && safe.f === fast.f && Math.abs(safe.m - fast.m) < 1), gi: getGu(start), startWet: onsetAt(x, y) <= rain, moreOpen };
+    draw(fit);
+  }
+
+  let last = null, pick = 'safe'; // pick = 고른 경로(우회 safe · 빠른 fast), 다시 계산해도 유지
+  function draw(fit) {
+    const { fast, safe, same, gi, startWet, moreOpen } = last;
+    if (!fast) {
       map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); goal.remove();
       card.classList.add('rc-none'); // 11/2 승우: 제목 한 줄만, 왼쪽 정렬 · 세로 가운데
       card.innerHTML = `<p class="rc-h">도달 가능한 대피시설 없음</p>${BTNS()}`;
       return;
     }
-    const line = [[x, y]]; for (let v = found; v != null; v = prev.get(v)) line.splice(1, 0, [X[v], Y[v]]);
-    const f = goalOf.get(found), m = D.get(found);
-    line.push(f.geometry.coordinates);
+    card.classList.remove('rc-none');
+    const both = safe && !same, mode = !safe ? 'fast' : same ? 'safe' : pick, r = mode === 'safe' ? safe : fast;
+    const warn = mode === 'fast' && !same; // 빠른 경로(우회와 다름 · 우회로 없음) = 경고 문구 계속
+    const { line, f, m } = r;
     map.getSource('route').setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: line } });
     goal.setLngLat(f.geometry.coordinates).addTo(map);
     if (fit) { // 새 경로: 경로 전체가 보이게(오른쪽 아래 카드 자리는 비움)
@@ -137,9 +163,11 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
       return `<tr><td><span class="pn"><i class="chip" style="background:${pp.color}"></i>${pp.name}</span></td><td class="v">${Math.max(1, Math.round(min))}분</td><td><span class="vd">${verdict}</span></td></tr>`;
     }).join('');
     const p = f.properties, cap = p.수용인원명 != null ? `${Math.round(p.수용인원명).toLocaleString('ko-KR')}명` : '–';
-    card.innerHTML = `${BTNS()}<p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
+    const more = card.querySelector('.rc-more'), keepOpen = more ? more.open : moreOpen;
+    const tabs = both ? `<div class="rc-tabs">${[['safe', '우회 경로'], ['fast', '빠른 경로']].map(([k, w]) => `<button type="button" data-route="${k}" aria-pressed="${mode === k}">${w}</button>`).join('')}</div>` : '';
+    card.innerHTML = `${BTNS()}${tabs}${warn ? '<p class="rc-w rc-warn">현재 안내된 길은 도로 침수 위험이 있으니 각별히 주의하시기 바랍니다.</p>' : ''}<p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
       <dl class="rc-f"><div><dt>거리</dt><dd>${(m / 1000).toFixed(2)} km</dd></div><div><dt>수용 인원</dt><dd>${cap}</dd></div><div><dt>위치</dt><dd>${p.자치구} ${p.행정동}</dd></div></dl>
-      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다</p>' : ''}<details class="rc-more"${moreOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
+      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다</p>' : ''}<details class="rc-more"${keepOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
       <table><thead><tr><th>시민 유형</th><th class="v">도보 시간</th><th>대피 가능 여부</th></tr></thead><tbody>${rows}</tbody></table></details>`;
   }
 
@@ -149,6 +177,8 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
   const clear = () => { ghost(false); start = null; pin.remove(); goal.remove(); card.hidden = true; map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); };
   map.on('click', (e) => { if (on) go(e.lngLat); });
   card.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-route]');
+    if (t) { pick = t.dataset.route; draw(false); return; } // 우회 · 빠른 경로 바꾸기(다시 계산 안 함)
     if (e.target.closest('.rc-x')) clear();
     else if (e.target.closest('.rc-min, .rc-h')) { // 접기 버튼 또는 시설 이름 누르기 = 접기/펴기
       mini = !mini; card.classList.toggle('mini', mini);
