@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 잠긴 길(0.3 m 이상 = 인명 위해 수심)과 계단을 피해 가장 가까운 대피시설까지 걷는 길.
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=9decde1';
+import { BUILD_OP } from './map.js?v=4f91366';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -112,14 +112,9 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
         }
       }
     }
-    // 대피시설 자료는 회신한 14개 구만 → 그 밖의 구는 이웃 구 시설로 안내하고, 못 찾으면 이유를 정확히(11/2 승우: 비 0 인데 '침수' 문구가 뜸)
-    const gn = guBox.find((g) => g.gi === gi)?.gn, noData = gn != null && !shelters.features.some((f) => f.properties.자치구 === gn);
-    const note = noData ? `<p class="rc-s">${gn}는 대피시설 자료가 없어(자치구 미회신) 이웃 구 시설로 안내합니다</p>` : '';
     if (found == null) {
       map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); goal.remove();
-      const near = sv.some((s) => dist(x, y, ...s.f.geometry.coordinates) < MAX_M); // 6 km 안에 시설이 있는데 못 감 = 길이 잠김
-      const why = near && rain > 0 ? '주변 길이 침수(수심 0.3 m 이상)되어 걸어서 갈 수 있는 대피시설이 없습니다' : '걸어서 6 km 안에 대피시설이 없습니다';
-      card.innerHTML = `${BTNS()}<p class="rc-h">${noData ? `${gn} 대피시설 자료 없음` : '도달 가능한 대피시설 없음'}</p>${noData ? `<p class="rc-s">자치구 미회신으로 대피시설 위치가 없습니다. ${why.replace('없습니다', '없습니다(이웃 구 기준)')}</p>` : `<p class="rc-s">${why}</p>`}`;
+      card.innerHTML = `${BTNS()}<p class="rc-h">도달 가능한 대피시설 없음</p><p class="rc-s">${sv.length ? '주변 도로가 침수되었거나 6 km 이내에 대피시설이 없습니다' : '이 지역은 대피시설 정보가 없습니다'}</p>`;
       return;
     }
     const line = [[x, y]]; for (let v = found; v != null; v = prev.get(v)) line.splice(1, 0, [X[v], Y[v]]);
@@ -143,7 +138,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     const p = f.properties, cap = p.수용인원명 != null ? `${Math.round(p.수용인원명).toLocaleString('ko-KR')}명` : '–';
     card.innerHTML = `${BTNS()}<p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
       <dl class="rc-f"><div><dt>거리</dt><dd>${(m / 1000).toFixed(2)} km</dd></div><div><dt>수용 인원</dt><dd>${cap}</dd></div><div><dt>위치</dt><dd>${p.자치구} ${p.행정동}</dd></div></dl>
-      ${note}${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다</p>' : ''}<details class="rc-more"${moreOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
+      ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다</p>' : ''}<details class="rc-more"${moreOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
       <table><thead><tr><th>시민 유형</th><th class="v">도보 시간</th><th>대피 가능 여부</th></tr></thead><tbody>${rows}</tbody></table></details>`;
   }
 
