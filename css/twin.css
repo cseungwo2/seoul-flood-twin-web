@@ -188,7 +188,7 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 /* 접은 카드 = 시설 이름 한 줄만(지도를 거의 안 가림, 11/1 승우) */
 .routecard.mini > :not(.rc-x, .rc-min, .rc-h) { display: none; }
 .routecard.mini .rc-h { margin: 0; line-height: 26px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.askpop .maplibregl-popup-content p { margin: 0 0 8px; font-size: 15px; }
+.askpop .maplibregl-popup-content p { margin: 0 0 8px; font-size: min(15px, 3.4vw); white-space: nowrap; } /* 한 줄(11/2 승우), 좁은 폰은 글자만 작게 */
 .askpop .ask-b { display: flex; gap: 6px; }
 .askpop .ask-b button { flex: 1; padding: 6px 0; font: 700 15px/1 var(--font); border-radius: 4px; cursor: pointer; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); }
 .askpop .ask-b .go { background: #2E7D4F; border-color: #2E7D4F; color: #fff; }
@@ -487,6 +487,8 @@ input[type="range"] { width: 100%; margin: 4px 0 2px; accent-color: var(--crimso
 .routecard .rc-tabs button + button { border-left: 1px solid var(--line-2); }
 .routecard .rc-tabs button[aria-pressed="true"] { color: #fff; background: #2E7D4F; }
 .routecard .rc-tabs button[data-route="fast"][aria-pressed="true"] { background: var(--crimson); }
-.routecard .rc-warn { margin: 0 0 6px; text-align: left; }
+.routecard { container-type: inline-size; } /* 경고 문구 글자 = 카드 폭에 맞춰(한 줄) */
+.routecard .rc-warn { margin: 0 0 6px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: min(13px, 2.8cqw); }
+.routecard .rc-tabs button:disabled { opacity: 0.35; cursor: default; }
 .routecard.mini > .rc-warn { display: block; margin: 4px 0 0; }
 @media (max-width: 1180px), (pointer: coarse) { .routecard .rc-tabs button { min-height: 40px; } .routecard .rc-tabs { width: calc(100% - 96px); } }

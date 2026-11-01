@@ -1,6 +1,6 @@
 // 대피 경로: 지도에 핀을 찍으면 계단을 피해 가장 가까운 대피시설까지 걷는 길(침수 수심과 무관, 11/2 승우).
 // 길 = OpenStreetMap 걷는 길(web/data/walk/{구}.json, prep/fetch_walk.py). 강우가 바뀌면 다시 찾음.
-import { BUILD_OP } from './map.js?v=d333212';
+import { BUILD_OP } from './map.js?v=6c9ea3e';
 export const SPEED = [0.47, 0.47, 0.65, 0.65, 0.65, 0.65]; // m/s, 시민 유형 순서 — model.json evac.speed_ms 와 같음(동일본대지진 도보 대피 실측, prep/persona.py)
 const M_LAT = 110540, MAX_M = 6000, NEAR = 0.03;      // 위도 1° ≈ m, 6 km 넘으면 포기, 핀 주변 약 3 km 구만 불러옴
 
@@ -136,7 +136,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
 
   let last = null, pick = 'safe'; // pick = 고른 경로(우회 safe · 빠른 fast), 다시 계산해도 유지
   function draw(fit) {
-    const { fast, safe, same, gi, startWet, moreOpen } = last;
+    const { fast, safe, gi, startWet, moreOpen } = last;
     if (!fast) {
       map.getSource('route').setData({ type: 'FeatureCollection', features: [] }); goal.remove();
       card.classList.add('rc-none'); // 11/2 승우: 제목 한 줄만, 왼쪽 정렬 · 세로 가운데
@@ -144,8 +144,9 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
       return;
     }
     card.classList.remove('rc-none');
-    const both = safe && !same, mode = !safe ? 'fast' : same ? 'safe' : pick, r = mode === 'safe' ? safe : fast;
-    const warn = mode === 'fast' && !same; // 빠른 경로(우회와 다름 · 우회로 없음) = 경고 문구 계속
+    // 경로가 있으면 고르기 칸 항상 표시(11/2 승우). 우회로가 없으면 '우회 경로' 칸은 흐리게(못 누름)
+    const mode = !safe ? 'fast' : pick, r = mode === 'safe' ? safe : fast;
+    const warn = mode === 'fast'; // 빠른 경로를 고르면 경고 문구 계속
     const { line, f, m } = r;
     map.getSource('route').setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: line } });
     goal.setLngLat(f.geometry.coordinates).addTo(map);
@@ -164,7 +165,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
     }).join('');
     const p = f.properties, cap = p.수용인원명 != null ? `${Math.round(p.수용인원명).toLocaleString('ko-KR')}명` : '–';
     const more = card.querySelector('.rc-more'), keepOpen = more ? more.open : moreOpen;
-    const tabs = both ? `<div class="rc-tabs">${[['safe', '우회 경로'], ['fast', '빠른 경로']].map(([k, w]) => `<button type="button" data-route="${k}" aria-pressed="${mode === k}">${w}</button>`).join('')}</div>` : '';
+    const tabs = `<div class="rc-tabs">${[['safe', '우회 경로'], ['fast', '빠른 경로']].map(([k, w]) => `<button type="button" data-route="${k}" aria-pressed="${mode === k}"${k === 'safe' && !safe ? ' disabled' : ''}>${w}</button>`).join('')}</div>`;
     card.innerHTML = `${BTNS()}${tabs}${warn ? '<p class="rc-w rc-warn">현재 안내된 길은 도로 침수 위험이 있으니 각별히 주의하시기 바랍니다.</p>' : ''}<p class="rc-k">가장 가까운 대피시설</p><p class="rc-h">${p.시설명}</p>
       <dl class="rc-f"><div><dt>거리</dt><dd>${(m / 1000).toFixed(2)} km</dd></div><div><dt>수용 인원</dt><dd>${cap}</dd></div><div><dt>위치</dt><dd>${p.자치구} ${p.행정동}</dd></div></dl>
       ${startWet ? '<p class="rc-w">출발 위치가 침수 중입니다</p>' : ''}<details class="rc-more"${keepOpen ? ' open' : ''}><summary>시민 유형별 대피 가능 여부 <span>${n.ok + n.no ? `${n.no ? `<b class="no">곤란 ${n.no}</b> ` : ''}${n.ok ? `<b class="ok">가능 ${n.ok}</b>` : ''}` : '대피 불필요'}</span></summary>
@@ -187,7 +188,7 @@ export function initRoute({ map, base, guBox, shelters, water, getGu, persona, g
   });
 
   // 건물 클릭 → "대피 경로로 안내할까요?" → 안내 = 그 건물에서 가장 가까운 대피시설
-  const ask = new maplibregl.Popup({ closeButton: false, maxWidth: '240px', className: 'askpop', offset: 6 });
+  const ask = new maplibregl.Popup({ closeButton: false, maxWidth: 'none', className: 'askpop', offset: 6 });
   const offer = (ll) => {
     if (on) return; // 경로 모드에선 바로 핀
     const el = document.createElement('div');
